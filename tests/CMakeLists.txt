@@ -5,6 +5,7 @@
 add_executable(stlx_tests
     test_main.cpp
     test_stlx.cpp
+    test_xstring.cpp
 )
 
 # Link with GTest and STLX library
