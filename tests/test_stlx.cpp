@@ -1,3 +1,17 @@
+/**
+ * @file test_stlx.cpp
+ * @brief Unit tests for STLX core utilities
+ *
+ * This file contains comprehensive unit tests for the STLX library core
+ * utilities including string manipulation, formatting, concepts, and RAII
+ * utilities.
+ *
+ * @copyright Copyright (c) 2025 David Mott
+ * @license Distributed under the Boost Software License, Version 1.0.
+ *          (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
 #include <gtest/gtest.h>
 #include <stlx/stlx.hpp>
 #include <string>

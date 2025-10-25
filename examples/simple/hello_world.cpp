@@ -1,3 +1,16 @@
+/**
+ * @file hello_world.cpp
+ * @brief Simple example demonstrating STLX C++23 utilities
+ *
+ * This example showcases basic usage of the STLX library including
+ * string formatting, concepts, and C++23 features.
+ *
+ * @copyright Copyright (c) 2025 David Mott
+ * @license Distributed under the Boost Software License, Version 1.0.
+ *          (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
 #include <iostream>
 #include <stlx/stlx.hpp>
 #include <string>

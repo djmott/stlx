@@ -1,3 +1,16 @@
+/**
+ * @file main.cpp
+ * @brief Complex example application demonstrating STLX library usage
+ *
+ * This example shows how to use the STLX library in a multi-file application
+ * with separate compilation units and demonstrates various C++23 features.
+ *
+ * @copyright Copyright (c) 2025 David Mott
+ * @license Distributed under the Boost Software License, Version 1.0.
+ *          (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
 #include "module_a.hpp"
 #include <exception>
 #include <iostream>

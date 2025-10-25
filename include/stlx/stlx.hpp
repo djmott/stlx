@@ -1,4 +1,19 @@
-#pragma once
+/**
+ * @file stlx.hpp
+ * @brief STLX - C++23 utilities and extensions
+ *
+ * This file provides a collection of C++23 utilities including string
+ * manipulation, formatting, concepts, and RAII utilities. It serves as the main
+ * header for the STLX library.
+ *
+ * @copyright Copyright (c) 2025 David Mott
+ * @license Distributed under the Boost Software License, Version 1.0.
+ *          (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
+#ifndef STLX_STLX_HPP
+#define STLX_STLX_HPP
 
 #include <concepts>
 #include <format>
@@ -167,3 +182,5 @@ constexpr std::size_t hash_string(std::string_view str) noexcept {
 }
 
 } // namespace stlx
+
+#endif // STLX_STLX_HPP

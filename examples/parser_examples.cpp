@@ -1,3 +1,16 @@
+/**
+ * @file parser_examples.cpp
+ * @brief Parser combinator examples and demonstrations
+ * 
+ * This file demonstrates various uses of the STLX parser combinator library
+ * including expression parsing, JSON-like structures, and regex patterns.
+ * 
+ * @copyright Copyright (c) 2025 David Mott
+ * @license Distributed under the Boost Software License, Version 1.0.
+ *          (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
 #include <iostream>
 #include <string>
 #include <vector>
