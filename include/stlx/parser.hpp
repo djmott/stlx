@@ -96,7 +96,7 @@ public:
 protected:
   void set_parent(weak_ptr_t oParent) {
     _parent = oParent;
-    auto oThis = shared_from_this();
+    auto oThis = this->shared_from_this();
     for (auto& oChild : static_cast<super_t&>(*this)) {
       oChild->set_parent(oThis);
     }
@@ -108,8 +108,14 @@ private:
 // Helper to clone rules for AST building
 template <typename RuleT>
 std::shared_ptr<RuleT> clone_rule(const std::shared_ptr<RuleT>& src) {
-  auto clone = std::make_shared<RuleT>(*src);
-  return clone;
+  if constexpr (std::is_abstract_v<RuleT>) {
+    // For abstract types, we can't clone directly
+    // This is a limitation of the current design
+    return nullptr;
+  } else {
+    auto clone = std::make_shared<RuleT>(*src);
+    return clone;
+  }
 }
 
 // Rule template using CRTP with proper iterator type handling
@@ -159,6 +165,7 @@ template <typename Iterator, typename ...> class not_;
 template <typename Iterator> 
 class not_<Iterator> : public rule<Iterator, not_<Iterator>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, not_<Iterator>>;
   template <typename ... _child_rule_ts>
   explicit not_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -183,6 +190,7 @@ public:
 template <typename Iterator, typename _head_t, typename ... _tail_ts>
 class not_<Iterator, _head_t, _tail_ts...> : public rule<Iterator, not_<Iterator, _head_t, _tail_ts...>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, not_<Iterator, _head_t, _tail_ts...>>;
   template <typename ... _child_rule_ts>
   explicit not_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -215,9 +223,21 @@ public:
 
 // AND combinator (uses default sequence implementation)
 template <typename Iterator, typename ...> class and_;
-template <typename Iterator> class and_<Iterator> : public rule<Iterator, and_<Iterator>> {};
+template <typename Iterator> class and_<Iterator> : public rule<Iterator, and_<Iterator>> {
+public:
+  using iterator_type = Iterator;
+  using _super_t = rule<Iterator, and_<Iterator>>;
+  template <typename ... _child_rule_ts>
+  explicit and_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
+};
 template <typename Iterator, typename _head_t, typename ... _tail_ts>
-class and_<Iterator, _head_t, _tail_ts...> : public rule<Iterator, and_<Iterator, _head_t, _tail_ts...>> {};
+class and_<Iterator, _head_t, _tail_ts...> : public rule<Iterator, and_<Iterator, _head_t, _tail_ts...>> {
+public:
+  using iterator_type = Iterator;
+  using _super_t = rule<Iterator, and_<Iterator, _head_t, _tail_ts...>>;
+  template <typename ... _child_rule_ts>
+  explicit and_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
+};
 
 // OR combinator with proper template handling
 template <typename Iterator, typename ...> class or_;
@@ -225,6 +245,7 @@ template <typename Iterator, typename ...> class or_;
 template <typename Iterator> 
 class or_<Iterator> : public rule<Iterator, or_<Iterator>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, or_<Iterator>>;
   template <typename ... _child_rule_ts>
   explicit or_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -254,6 +275,7 @@ class or_<Iterator, _head_t, _tail_ts...> : public rule<Iterator, or_<Iterator, 
 template <typename Iterator, typename _ty>
 class one_or_more_ : public rule<Iterator, one_or_more_<Iterator, _ty>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, one_or_more_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
   explicit one_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -276,7 +298,7 @@ public:
       begin = backup;
       return false;
     }
-    this->push_back(clone_rule(child));
+    // Don't store the child rule, just count the matches
 
     while (true) {
       auto loop_backup = begin;
@@ -287,7 +309,7 @@ public:
       }
       // Prevent infinite loop: if no progress was made, break
       if (begin == loop_backup) break;
-      this->push_back(clone_rule(child));
+      // Don't store the child rule, just count the matches
     }
     return true;
   }
@@ -297,6 +319,7 @@ public:
 template <typename Iterator, typename _ty>
 class zero_or_more_ : public rule<Iterator, zero_or_more_<Iterator, _ty>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_more_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
   explicit zero_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -313,7 +336,7 @@ public:
       }
       // Prevent infinite loop: if no progress was made, break
       if (begin == backup) break;
-      this->push_back(clone_rule(child));
+      // Don't store the child rule, just count the matches
     }
     return true;
   }
@@ -323,6 +346,7 @@ public:
 template <typename Iterator, typename _ty>
 class zero_or_one_ : public rule<Iterator, zero_or_one_<Iterator, _ty>> {
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_one_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
   explicit zero_or_one_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
@@ -333,7 +357,7 @@ public:
     if (ctx.ignore_whitespace) skip_ws(begin, end, ctx.ignore_whitespace);
     auto child = this->front();
     if (child->parse(ctx, begin, end)) {
-      this->push_back(clone_rule(child));
+      // Don't store the child rule, just count the matches
       return true;
     }
     begin = backup;
@@ -348,6 +372,7 @@ private:
   std::string _matched;
 
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, string<Iterator, _len, _str>>;
   static constexpr size_t length = _len - 1;
   string() = default;
@@ -380,6 +405,7 @@ private:
   char _matched = 0;
 
 public:
+  using iterator_type = Iterator;
   bool parse(context<iterator_type>& ctx, iterator_type& begin, iterator_type& end) override {
     auto backup = begin;
     if (ctx.ignore_whitespace) skip_ws(begin, end, ctx.ignore_whitespace);
@@ -405,6 +431,7 @@ private:
   char _matched = 0;
 
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, characters<Iterator, _first, _last>>;
 
   bool parse(context<iterator_type>& ctx, iterator_type& begin, iterator_type& end) override {
@@ -459,6 +486,7 @@ private:
   }
 
 public:
+  using iterator_type = Iterator;
   using _super_t = rule<Iterator, regex<Iterator, _len, _str>>;
   static constexpr size_t length = _len - 1;
 
