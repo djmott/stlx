@@ -4,6 +4,7 @@
 [![Pull Request Checks](https://github.com/djmott/stlx/actions/workflows/pr.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/pr.yml)
 [![Release Pipeline](https://github.com/djmott/stlx/actions/workflows/release.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/release.yml)
 [![Scheduled Analysis](https://github.com/djmott/stlx/actions/workflows/scheduled.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/scheduled.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/59354c5ee86e4e1c969ea5cbbe59d9c1)](https://app.codacy.com/gh/djmott/stlx/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 A comprehensive CMake project demonstrating modern C++23 features with integrated testing, sanitizers, static/dynamic analysis tools, and code coverage support.
 
