@@ -116,17 +116,17 @@ std::string format_string(const T &fmt, Arg &&arg, Args &&...args) {
   return result;
 }
 
-// Print utilities using C++23 std::print (if available)
+// Print utilities - Visual C++ compatible version
 template <StringLike T, typename... Args>
 void print_string(const T &fmt, Args &&...args) {
 #ifdef __cpp_lib_print
-  if constexpr (requires {
-                  std::print(to_string_view(fmt), std::forward<Args>(args)...);
-                }) {
-    std::print(to_string_view(fmt), std::forward<Args>(args)...);
-  } else {
-    std::cout << format_string(fmt, std::forward<Args>(args)...);
-  }
+#ifndef _MSC_VER
+  // Use std::print for non-MSVC compilers
+  std::print(to_string_view(fmt), std::forward<Args>(args)...);
+#else
+  // Use manual formatting for MSVC
+  std::cout << format_string(fmt, std::forward<Args>(args)...);
+#endif
 #else
   // Fallback for compilers without std::print
   std::cout << format_string(fmt, std::forward<Args>(args)...);
