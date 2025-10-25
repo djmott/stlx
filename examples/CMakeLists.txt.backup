@@ -23,7 +23,16 @@ if(NOT SANITIZER_TYPE STREQUAL "None")
     apply_sanitizers(complex_example)
 endif()
 
+# Parser examples
+add_executable(parser_examples parser_examples.cpp)
+target_link_libraries(parser_examples stlx)
+
+# Apply sanitizers if requested
+if(NOT SANITIZER_TYPE STREQUAL "None")
+    apply_sanitizers(parser_examples)
+endif()
+
 # Set output directories
-set_target_properties(hello_world complex_example PROPERTIES
+set_target_properties(hello_world complex_example parser_examples PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
