@@ -93,6 +93,9 @@ public:
 
   virtual std::string_view get_text() const { return ""; }
 
+  // Virtual size() method that can be overridden by quantifier combinators
+  virtual size_t size() const { return super_t::size(); }
+
 protected:
   void set_parent(weak_ptr_t oParent) {
     _parent = oParent;
@@ -278,7 +281,7 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, one_or_more_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
-  explicit one_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
+  explicit one_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...), _match_count(0) {}
 
   bool parse(context<iterator_type>& ctx, iterator_type& begin, iterator_type& end) override {
     auto backup = begin;
@@ -290,6 +293,7 @@ public:
       return false;
     }
     auto child = this->front();
+    _match_count = 0; // Reset match count
 
     if (!child->parse(ctx, begin, end)) {
       ctx.parse_errors.emplace_back(std::make_shared<parse_error<iterator_type>>(
@@ -298,7 +302,7 @@ public:
       begin = backup;
       return false;
     }
-    // Don't store the child rule, just count the matches
+    _match_count++; // Count the first match
 
     while (true) {
       auto loop_backup = begin;
@@ -309,10 +313,18 @@ public:
       }
       // Prevent infinite loop: if no progress was made, break
       if (begin == loop_backup) break;
-      // Don't store the child rule, just count the matches
+      _match_count++; // Count additional matches
     }
     return true;
   }
+
+  // Override size() to return the number of matches, not child rules
+  size_t size() const override {
+    return _match_count;
+  }
+
+private:
+  size_t _match_count;
 };
 
 // ZERO_OR_MORE combinator with proper template handling
@@ -322,11 +334,13 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_more_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
-  explicit zero_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
+  explicit zero_or_more_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...), _match_count(0) {}
 
   bool parse(context<iterator_type>& ctx, iterator_type& begin, iterator_type& end) override {
     if (this->empty()) return true;
     auto child = this->front();
+    _match_count = 0; // Reset match count
+    
     while (true) {
       auto backup = begin;
       if (ctx.ignore_whitespace) skip_ws(begin, end, ctx.ignore_whitespace);
@@ -336,10 +350,18 @@ public:
       }
       // Prevent infinite loop: if no progress was made, break
       if (begin == backup) break;
-      // Don't store the child rule, just count the matches
+      _match_count++; // Count each match
     }
     return true;
   }
+
+  // Override size() to return the number of matches, not child rules
+  size_t size() const override {
+    return _match_count;
+  }
+
+private:
+  size_t _match_count;
 };
 
 // ZERO_OR_ONE combinator with proper template handling
@@ -349,20 +371,30 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_one_<Iterator, _ty>>;
   template <typename ... _child_rule_ts>
-  explicit zero_or_one_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...) {}
+  explicit zero_or_one_(_child_rule_ts&& ... oChildRules) : _super_t(std::forward<_child_rule_ts>(oChildRules)...), _match_count(0) {}
 
   bool parse(context<iterator_type>& ctx, iterator_type& begin, iterator_type& end) override {
     if (this->empty()) return true;
     auto backup = begin;
     if (ctx.ignore_whitespace) skip_ws(begin, end, ctx.ignore_whitespace);
     auto child = this->front();
+    _match_count = 0; // Reset match count
+    
     if (child->parse(ctx, begin, end)) {
-      // Don't store the child rule, just count the matches
+      _match_count = 1; // Count the single match
       return true;
     }
     begin = backup;
-    return true;
+    return true; // Zero matches is also success
   }
+
+  // Override size() to return the number of matches, not child rules
+  size_t size() const override {
+    return _match_count;
+  }
+
+private:
+  size_t _match_count;
 };
 
 // STRING terminal with proper template handling
