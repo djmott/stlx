@@ -1,6 +1,45 @@
 # STLX - C++23 Utilities and Examples
 
+[![CI/CD Pipeline](https://github.com/djmott/stlx/actions/workflows/ci.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/ci.yml)
+[![Pull Request Checks](https://github.com/djmott/stlx/actions/workflows/pr.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/pr.yml)
+[![Release Pipeline](https://github.com/djmott/stlx/actions/workflows/release.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/release.yml)
+[![Scheduled Analysis](https://github.com/djmott/stlx/actions/workflows/scheduled.yml/badge.svg)](https://github.com/djmott/stlx/actions/workflows/scheduled.yml)
+
 A comprehensive CMake project demonstrating modern C++23 features with integrated testing, sanitizers, static/dynamic analysis tools, and code coverage support.
+
+## CI/CD Pipeline
+
+This project includes a comprehensive GitHub Actions CI/CD pipeline that provides:
+
+### 🔄 Continuous Integration
+- **Multi-Compiler Testing**: GCC 11-13, Clang 14-17, MSVC 2019/2022
+- **Multi-Platform Support**: Ubuntu, Windows, macOS
+- **Sanitizer Testing**: Address, UndefinedBehavior, Thread, Leak, Memory sanitizers
+- **Static Analysis**: cppcheck, cpplint, clang-tidy, IWYU
+- **Dynamic Analysis**: Valgrind memory leak detection
+- **Code Coverage**: HTML reports with gcovr
+
+### 📊 Analysis Reports
+- **Test Results**: XML and TXT format reports
+- **Coverage Reports**: Interactive HTML coverage reports
+- **Static Analysis**: Comprehensive static analysis results
+- **Performance Benchmarks**: Performance trend analysis
+- **Security Scans**: Vulnerability scanning with Trivy
+
+### 📦 Artifact Downloads
+All analysis reports and coverage data are available as downloadable artifacts:
+- Test results from all configurations
+- Coverage reports in HTML format
+- Static analysis reports (XML/TXT)
+- Performance benchmark data
+- Security scan results
+
+### 🎯 Workflow Matrix
+The CI pipeline tests **174+ build configurations**:
+- 63 GCC configurations (3 versions × 7 sanitizers × 3 configs)
+- 84 Clang configurations (4 versions × 7 sanitizers × 3 configs)
+- 12 MSVC configurations (2 versions × 3 sanitizers × 2 configs)
+- 15 macOS configurations (1 platform × 5 sanitizers × 3 configs)
 
 ## Features
 
