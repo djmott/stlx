@@ -1,0 +1,124 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, master, dev ]
+
+env:
+  BUILD_TYPE: Release
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  # Quick PR Checks
+  pr-checks:
+    name: PR Checks - ${{ matrix.compiler }} - ${{ matrix.config }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc-13, clang-17]
+        config: [basic, analysis]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ${{ matrix.compiler }} \
+          cmake \
+          ninja-build \
+          valgrind \
+          cppcheck \
+          clang-tidy \
+          clang-format \
+          python3-pip
+        pip install gcovr cpplint
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DSANITIZER_TYPE=None \
+          -DENABLE_COVERAGE=${{ matrix.config == 'coverage' }} \
+          -DENABLE_CLANG_TIDY=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPCHECK=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPLINT=${{ matrix.config == 'analysis' }} \
+          -DENABLE_IWYU=${{ matrix.config == 'analysis' }}
+
+    - name: Build
+      run: |
+        cd build
+        ninja -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Static Analysis
+      if: matrix.config == 'analysis'
+      run: |
+        cd build
+        ninja cppcheck cpplint clang-tidy-report iwyu || true
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pr-test-results-${{ matrix.compiler }}-${{ matrix.config }}
+        path: build/reports/
+        retention-days: 7
+
+  # Code Quality Check
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format python3-pip
+        pip install cpplint
+
+    - name: Check Code Formatting
+      run: |
+        find . -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | grep -v ".build" | xargs clang-format --dry-run --Werror
+
+    - name: Check Code Style
+      run: |
+        find . -name "*.cpp" -o -name "*.hpp" -o -name "*.h" | grep -v ".build" | xargs cpplint --filter=-build/include_subdir
+
+  # Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

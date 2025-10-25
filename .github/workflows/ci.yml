@@ -1,0 +1,472 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+env:
+  BUILD_TYPE: Release
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  # GCC Build Matrix
+  gcc-build:
+    name: GCC ${{ matrix.compiler }} - ${{ matrix.sanitizer }} - ${{ matrix.config }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc-11, gcc-12, gcc-13]
+        sanitizer: [None, Address, UndefinedBehavior, Thread, Leak, Memory, All]
+        config: [basic, coverage, analysis]
+        exclude:
+          # Skip coverage with sanitizers (incompatible)
+          - sanitizer: Address
+            config: coverage
+          - sanitizer: UndefinedBehavior
+            config: coverage
+          - sanitizer: Thread
+            config: coverage
+          - sanitizer: Leak
+            config: coverage
+          - sanitizer: Memory
+            config: coverage
+          - sanitizer: All
+            config: coverage
+          # Skip analysis with sanitizers (too slow)
+          - sanitizer: Address
+            config: analysis
+          - sanitizer: UndefinedBehavior
+            config: analysis
+          - sanitizer: Thread
+            config: analysis
+          - sanitizer: Leak
+            config: analysis
+          - sanitizer: Memory
+            config: analysis
+          - sanitizer: All
+            config: analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ${{ matrix.compiler }} \
+          ${{ matrix.compiler }}-multilib \
+          cmake \
+          ninja-build \
+          valgrind \
+          cppcheck \
+          clang-tidy \
+          clang-format \
+          python3-pip
+        pip install gcovr
+
+    - name: Set up environment
+      run: |
+        echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+        echo "CXX=${{ matrix.compiler }}" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=100M" >> $GITHUB_ENV
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DSANITIZER_TYPE=${{ matrix.sanitizer }} \
+          -DENABLE_COVERAGE=${{ matrix.config == 'coverage' }} \
+          -DENABLE_CLANG_TIDY=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPCHECK=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPLINT=${{ matrix.config == 'analysis' }} \
+          -DENABLE_IWYU=${{ matrix.config == 'analysis' }}
+
+    - name: Build
+      run: |
+        cd build
+        ninja -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Static Analysis
+      if: matrix.config == 'analysis'
+      run: |
+        cd build
+        ninja cppcheck cpplint clang-tidy-report iwyu || true
+
+    - name: Run Dynamic Analysis
+      if: matrix.config == 'basic' && matrix.sanitizer == 'None'
+      run: |
+        cd build
+        ninja valgrind-tests || true
+
+    - name: Generate Coverage Report
+      if: matrix.config == 'coverage'
+      run: |
+        cd build
+        ninja coverage_html || true
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-gcc-${{ matrix.compiler }}-${{ matrix.sanitizer }}-${{ matrix.config }}
+        path: |
+          build/reports/
+          build/coverage/
+        retention-days: 30
+
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: matrix.config == 'coverage' && always()
+      with:
+        name: coverage-gcc-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+        path: build/coverage/
+        retention-days: 30
+
+  # Clang Build Matrix
+  clang-build:
+    name: Clang ${{ matrix.compiler }} - ${{ matrix.sanitizer }} - ${{ matrix.config }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang-14, clang-15, clang-16, clang-17]
+        sanitizer: [None, Address, UndefinedBehavior, Thread, Leak, Memory, All]
+        config: [basic, coverage, analysis]
+        exclude:
+          # Skip coverage with sanitizers (incompatible)
+          - sanitizer: Address
+            config: coverage
+          - sanitizer: UndefinedBehavior
+            config: coverage
+          - sanitizer: Thread
+            config: coverage
+          - sanitizer: Leak
+            config: coverage
+          - sanitizer: Memory
+            config: coverage
+          - sanitizer: All
+            config: coverage
+          # Skip analysis with sanitizers (too slow)
+          - sanitizer: Address
+            config: analysis
+          - sanitizer: UndefinedBehavior
+            config: analysis
+          - sanitizer: Thread
+            config: analysis
+          - sanitizer: Leak
+            config: analysis
+          - sanitizer: Memory
+            config: analysis
+          - sanitizer: All
+            config: analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ${{ matrix.compiler }} \
+          cmake \
+          ninja-build \
+          valgrind \
+          cppcheck \
+          clang-tidy \
+          clang-format \
+          python3-pip
+        pip install gcovr
+
+    - name: Set up environment
+      run: |
+        echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+        echo "CXX=${{ matrix.compiler }}" >> $GITHUB_ENV
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+          -DSANITIZER_TYPE=${{ matrix.sanitizer }} \
+          -DENABLE_COVERAGE=${{ matrix.config == 'coverage' }} \
+          -DENABLE_CLANG_TIDY=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPCHECK=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPLINT=${{ matrix.config == 'analysis' }} \
+          -DENABLE_IWYU=${{ matrix.config == 'analysis' }}
+
+    - name: Build
+      run: |
+        cd build
+        ninja -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Static Analysis
+      if: matrix.config == 'analysis'
+      run: |
+        cd build
+        ninja cppcheck cpplint clang-tidy-report iwyu || true
+
+    - name: Run Dynamic Analysis
+      if: matrix.config == 'basic' && matrix.sanitizer == 'None'
+      run: |
+        cd build
+        ninja valgrind-tests || true
+
+    - name: Generate Coverage Report
+      if: matrix.config == 'coverage'
+      run: |
+        cd build
+        ninja coverage_html || true
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-clang-${{ matrix.compiler }}-${{ matrix.sanitizer }}-${{ matrix.config }}
+        path: |
+          build/reports/
+          build/coverage/
+        retention-days: 30
+
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: matrix.config == 'coverage' && always()
+      with:
+        name: coverage-clang-${{ matrix.compiler }}-${{ matrix.sanitizer }}
+        path: build/coverage/
+        retention-days: 30
+
+  # MSVC Build Matrix
+  msvc-build:
+    name: MSVC ${{ matrix.version }} - ${{ matrix.sanitizer }} - ${{ matrix.config }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [2022, 2019]
+        sanitizer: [None, Address, UndefinedBehavior]
+        config: [basic, analysis]
+        exclude:
+          # MSVC doesn't support all sanitizers
+          - sanitizer: Thread
+          - sanitizer: Leak
+          - sanitizer: Memory
+          - sanitizer: All
+          # Skip analysis with sanitizers (too slow)
+          - sanitizer: Address
+            config: analysis
+          - sanitizer: UndefinedBehavior
+            config: analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        # Install Python for cpplint
+        choco install python3
+        pip install cpplint
+
+    - name: Set up MSVC
+      uses: microsoft/setup-msbuild@v1.3
+      with:
+        vs-version: ${{ matrix.version }}
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. \
+          -G "Visual Studio 17 2022" \
+          -A x64 \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DSANITIZER_TYPE=${{ matrix.sanitizer }} \
+          -DENABLE_CLANG_TIDY=OFF \
+          -DENABLE_CPPCHECK=OFF \
+          -DENABLE_CPPLINT=${{ matrix.config == 'analysis' }} \
+          -DENABLE_IWYU=OFF
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --config ${{ env.BUILD_TYPE }} --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }} -C ${{ env.BUILD_TYPE }}
+
+    - name: Run Static Analysis
+      if: matrix.config == 'analysis'
+      run: |
+        cd build
+        cmake --build . --target cpplint || true
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-msvc-${{ matrix.version }}-${{ matrix.sanitizer }}-${{ matrix.config }}
+        path: |
+          build/reports/
+        retention-days: 30
+
+  # macOS Build Matrix
+  macos-build:
+    name: macOS Clang - ${{ matrix.sanitizer }} - ${{ matrix.config }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [None, Address, UndefinedBehavior, Thread, Leak]
+        config: [basic, coverage, analysis]
+        exclude:
+          # Skip coverage with sanitizers (incompatible)
+          - sanitizer: Address
+            config: coverage
+          - sanitizer: UndefinedBehavior
+            config: coverage
+          - sanitizer: Thread
+            config: coverage
+          - sanitizer: Leak
+            config: coverage
+          # Skip analysis with sanitizers (too slow)
+          - sanitizer: Address
+            config: analysis
+          - sanitizer: UndefinedBehavior
+            config: analysis
+          - sanitizer: Thread
+            config: analysis
+          - sanitizer: Leak
+            config: analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        brew install cmake ninja valgrind cppcheck clang-format
+        pip3 install gcovr cpplint
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DSANITIZER_TYPE=${{ matrix.sanitizer }} \
+          -DENABLE_COVERAGE=${{ matrix.config == 'coverage' }} \
+          -DENABLE_CLANG_TIDY=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPCHECK=${{ matrix.config == 'analysis' }} \
+          -DENABLE_CPPLINT=${{ matrix.config == 'analysis' }} \
+          -DENABLE_IWYU=${{ matrix.config == 'analysis' }}
+
+    - name: Build
+      run: |
+        cd build
+        ninja -j${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure --parallel ${{ env.CMAKE_BUILD_PARALLEL_LEVEL }}
+
+    - name: Run Static Analysis
+      if: matrix.config == 'analysis'
+      run: |
+        cd build
+        ninja cppcheck cpplint clang-tidy-report iwyu || true
+
+    - name: Run Dynamic Analysis
+      if: matrix.config == 'basic' && matrix.sanitizer == 'None'
+      run: |
+        cd build
+        ninja valgrind-tests || true
+
+    - name: Generate Coverage Report
+      if: matrix.config == 'coverage'
+      run: |
+        cd build
+        ninja coverage_html || true
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-macos-clang-${{ matrix.sanitizer }}-${{ matrix.config }}
+        path: |
+          build/reports/
+          build/coverage/
+        retention-days: 30
+
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v4
+      if: matrix.config == 'coverage' && always()
+      with:
+        name: coverage-macos-clang-${{ matrix.sanitizer }}
+        path: build/coverage/
+        retention-days: 30
+
+  # Summary Job
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [gcc-build, clang-build, msvc-build, macos-build]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Generate Summary Report
+      run: |
+        echo "# Build Summary Report" > summary.md
+        echo "" >> summary.md
+        echo "## Build Status" >> summary.md
+        echo "" >> summary.md
+        echo "| Job | Status |" >> summary.md
+        echo "|-----|--------|" >> summary.md
+        echo "| GCC Builds | ${{ needs.gcc-build.result }} |" >> summary.md
+        echo "| Clang Builds | ${{ needs.clang-build.result }} |" >> summary.md
+        echo "| MSVC Builds | ${{ needs.msvc-build.result }} |" >> summary.md
+        echo "| macOS Builds | ${{ needs.macos-build.result }} |" >> summary.md
+        echo "" >> summary.md
+        echo "## Available Artifacts" >> summary.md
+        echo "" >> summary.md
+        find artifacts/ -name "*.xml" -o -name "*.html" -o -name "*.txt" | head -20 >> summary.md
+
+    - name: Upload Summary Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-summary
+        path: summary.md
+        retention-days: 30
