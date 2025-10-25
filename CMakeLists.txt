@@ -37,6 +37,23 @@ find_package(IWYU)
 if(CLANG_TIDY_FOUND AND ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_EXECUTABLE})
     message(STATUS "Enabled clang-tidy static analysis")
+    
+    # Create clang-tidy report target
+    file(GLOB_RECURSE CLANG_TIDY_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
+    )
+    add_custom_target(clang-tidy-report
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
+        COMMAND ${CLANG_TIDY_EXECUTABLE}
+            --format-style=file
+            --export-fixes=${CMAKE_BINARY_DIR}/reports/clang-tidy-fixes.yaml
+            ${CLANG_TIDY_SOURCES}
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy analysis completed" > ${CMAKE_BINARY_DIR}/reports/clang-tidy.txt
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running clang-tidy static analysis and generating report"
+    )
 endif()
 
 # Configure FetchContent for GTest
@@ -116,22 +133,27 @@ if(ENABLE_COVERAGE)
     endif()
 endif()
 
-# Static analysis targets
+# Static analysis targets with report generation
 if(CPPCHECK_FOUND AND ENABLE_CPPCHECK)
     add_custom_target(cppcheck
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
         COMMAND ${CPPCHECK_EXECUTABLE} 
             --enable=all 
             --inconclusive 
             --std=c++23
             --suppress=missingIncludeSystem
+            --xml
+            --xml-version=2
             ${CMAKE_CURRENT_SOURCE_DIR}/include
             ${CMAKE_CURRENT_SOURCE_DIR}/examples
             ${CMAKE_CURRENT_SOURCE_DIR}/tests
-        COMMENT "Running cppcheck static analysis"
+            > ${CMAKE_BINARY_DIR}/reports/cppcheck.xml
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running cppcheck static analysis and generating XML report"
     )
 endif()
 
-# cpplint style checking
+# cpplint style checking with report generation
 if(CPPLINT_FOUND AND ENABLE_CPPLINT)
     file(GLOB_RECURSE CPPLINT_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
@@ -139,25 +161,32 @@ if(CPPLINT_FOUND AND ENABLE_CPPLINT)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
     )
     add_custom_target(cpplint
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
         COMMAND ${CPPLINT_EXECUTABLE} 
             --linelength=100
             --filter=-build/include,-build/namespaces,-readability/namespace
+            --output=vs7
             ${CPPLINT_SOURCES}
-        COMMENT "Running cpplint style checking"
+        COMMAND ${CMAKE_COMMAND} -E echo "cpplint analysis completed" > ${CMAKE_BINARY_DIR}/reports/cpplint.txt
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running cpplint style checking and generating report"
     )
 endif()
 
-# Include What You Use analysis
+# Include What You Use analysis with report generation
 if(IWYU_FOUND AND ENABLE_IWYU)
     add_custom_target(iwyu
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
         COMMAND ${IWYU_EXECUTABLE}
             -Xiwyu --no_fwd_decls
             ${CMAKE_CURRENT_SOURCE_DIR}/include/stlx/stlx.hpp
-        COMMENT "Running Include What You Use analysis"
+        COMMAND ${CMAKE_COMMAND} -E echo "IWYU analysis completed" > ${CMAKE_BINARY_DIR}/reports/iwyu.txt
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running Include What You Use analysis and generating report"
     )
 endif()
 
-# Code formatting target
+# Code formatting target with report generation
 if(CLANG_FORMAT_FOUND)
     file(GLOB_RECURSE FORMAT_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
@@ -165,20 +194,108 @@ if(CLANG_FORMAT_FOUND)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
     )
     add_custom_target(format
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
         COMMAND ${CLANG_FORMAT_EXECUTABLE} -i ${FORMAT_SOURCES}
-        COMMENT "Formatting code with clang-format"
+        COMMAND ${CMAKE_COMMAND} -E echo "clang-format analysis completed" > ${CMAKE_BINARY_DIR}/reports/clang-format.txt
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Formatting code with clang-format and generating report"
     )
 endif()
 
-# Valgrind target for memory leak detection
+# Valgrind target for memory leak detection with report generation
 if(VALGRIND_FOUND)
     add_custom_target(valgrind-tests
-        COMMAND ${VALGRIND_EXECUTABLE} --leak-check=full --show-leak-kinds=all
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
+        COMMAND ${VALGRIND_EXECUTABLE} 
+            --leak-check=full 
+            --show-leak-kinds=all
+            --xml=yes
+            --xml-file=${CMAKE_BINARY_DIR}/reports/valgrind.xml
             $<TARGET_FILE:stlx_tests>
         DEPENDS stlx_tests
-        COMMENT "Running tests with valgrind memory leak detection"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running tests with valgrind memory leak detection and generating XML report"
     )
 endif()
+
+# Create reports directory
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/reports)
+
+# Comprehensive report generation target
+set(REPORT_TARGETS "")
+if(CPPCHECK_FOUND AND ENABLE_CPPCHECK)
+    list(APPEND REPORT_TARGETS cppcheck)
+endif()
+if(CPPLINT_FOUND AND ENABLE_CPPLINT)
+    list(APPEND REPORT_TARGETS cpplint)
+endif()
+if(IWYU_FOUND AND ENABLE_IWYU)
+    list(APPEND REPORT_TARGETS iwyu)
+endif()
+if(CLANG_FORMAT_FOUND)
+    list(APPEND REPORT_TARGETS format)
+endif()
+if(CLANG_TIDY_FOUND AND ENABLE_CLANG_TIDY)
+    list(APPEND REPORT_TARGETS clang-tidy-report)
+endif()
+if(VALGRIND_FOUND)
+    list(APPEND REPORT_TARGETS valgrind-tests)
+endif()
+
+if(REPORT_TARGETS)
+    add_custom_target(generate-all-reports
+        DEPENDS ${REPORT_TARGETS}
+        COMMENT "Generating all analysis reports"
+    )
+    
+    # Create summary report
+    add_custom_target(report-summary
+        COMMAND ${CMAKE_COMMAND} -E echo "=== STLX Analysis Reports Summary ===" > ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "Generated on: $(date)" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "C++ Standard: ${CMAKE_CXX_STANDARD}" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "Available Reports:" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- cppcheck.xml: Static analysis results" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- cpplint.txt: Google C++ style checking" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- iwyu.txt: Include What You Use analysis" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- clang-format.txt: Code formatting results" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- clang-tidy.txt: Clang static analysis" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- clang-tidy-fixes.yaml: Suggested fixes" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "- valgrind.xml: Memory leak detection" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        DEPENDS generate-all-reports
+        COMMENT "Generating analysis reports summary"
+    )
+endif()
+
+# CPack configuration
+include(CPack)
+set(CPACK_PACKAGE_NAME "stlx")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "STLX - C++23 utilities and examples")
+set(CPACK_PACKAGE_VENDOR "STLX Project")
+
+# Create test_results component
+cpack_add_component(test_results
+    DISPLAY_NAME "Test Results and Analysis Reports"
+    DESCRIPTION "Static and dynamic analysis reports, test results, and coverage data"
+    REQUIRED FALSE
+)
+
+# Install reports to test_results component
+if(REPORT_TARGETS)
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/reports/
+        DESTINATION reports
+        COMPONENT test_results
+        FILES_MATCHING PATTERN "*.xml" PATTERN "*.txt" PATTERN "*.yaml"
+    )
+endif()
+
+# Install test executables to test_results component
+install(TARGETS stlx_tests
+    RUNTIME DESTINATION bin
+    COMPONENT test_results
+)
 
 # Print configuration summary
 message(STATUS "")
@@ -194,5 +311,6 @@ message(STATUS "cpplint: ${CPPLINT_FOUND}")
 message(STATUS "iwyu: ${IWYU_FOUND}")
 message(STATUS "valgrind: ${VALGRIND_FOUND}")
 message(STATUS "gcovr: ${GCOVR_FOUND}")
+message(STATUS "Report Generation: ${REPORT_TARGETS}")
 message(STATUS "==================================")
 message(STATUS "")
