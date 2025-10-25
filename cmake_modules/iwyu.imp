@@ -1,0 +1,7 @@
+# IWYU mapping file for STLX project
+# Maps system headers to their proper includes
+
+[
+  { include: ["<iostream>", "private", "<iosfwd>", "public"] },
+  { include: ["<sstream>", "private", "<iosfwd>", "public"] }
+]

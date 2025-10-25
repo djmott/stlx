@@ -1,0 +1,49 @@
+# Tests CMakeLists.txt
+# Build GTest-based test suite
+
+# Create test executable
+add_executable(stlx_tests
+    test_main.cpp
+    test_stlx.cpp
+)
+
+# Link with GTest and STLX library
+target_link_libraries(stlx_tests
+    stlx
+    gtest_main
+)
+
+# Apply sanitizers if requested
+if(NOT SANITIZER_TYPE STREQUAL "None")
+    include(Sanitizers)
+    apply_sanitizers(stlx_tests)
+endif()
+
+# Register tests with CTest
+add_test(NAME stlx_tests COMMAND stlx_tests)
+
+# Set test properties
+set_tests_properties(stlx_tests PROPERTIES
+    TIMEOUT 30
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+# Add valgrind test if available
+if(VALGRIND_FOUND)
+    add_test(NAME stlx_tests_valgrind
+        COMMAND ${VALGRIND_EXECUTABLE} 
+            --leak-check=full 
+            --show-leak-kinds=all
+            --error-exitcode=1
+            $<TARGET_FILE:stlx_tests>
+    )
+    set_tests_properties(stlx_tests_valgrind PROPERTIES
+        TIMEOUT 60
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endif()
+
+# Set output directory
+set_target_properties(stlx_tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
