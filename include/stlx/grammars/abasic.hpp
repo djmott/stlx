@@ -213,6 +213,8 @@ struct input_statement
 };
 
 // IF comparison THEN ... ELSE ... ENDIF
+// Format: IF <cond> THEN \n <statements> ELSE \n <statements> ENDIF
+// Note: Newline whitespace is handled by the context, so we don't need to explicitly require newlines
 struct if_statement
     : rule<std::string::const_iterator, if_statement,
            and_<std::string::const_iterator,
