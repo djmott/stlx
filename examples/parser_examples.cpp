@@ -23,20 +23,21 @@ namespace expression_example {
 // Define basic terminals
 using digit = characters<std::string::const_iterator, '0', '9'>;
 using plus = character<std::string::const_iterator, '+'>;
-using minus = character<std::string::const_iterator, '-'>;
-using mult = character<std::string::const_iterator, '*'>;
-using div = character<std::string::const_iterator, '/'>;
 using lparen = character<std::string::const_iterator, '('>;
 using rparen = character<std::string::const_iterator, ')'>;
 
-// Define non-terminals
-using number = one_or_more_<std::string::const_iterator, digit>;
-using term = or_<std::string::const_iterator, number,
-                 and_<std::string::const_iterator, lparen, number, rparen>>;
-using expression = and_<
-    std::string::const_iterator, term,
-    zero_or_more_<std::string::const_iterator,
-                  and_<std::string::const_iterator, plus, term>>>; // Simplified
+// Define non-terminals using CRTP pattern
+struct number_rule : rule<std::string::const_iterator, number_rule,
+                         one_or_more_<std::string::const_iterator, digit>> {};
+
+struct term_rule : rule<std::string::const_iterator, term_rule,
+                       or_<std::string::const_iterator, number_rule,
+                           and_<std::string::const_iterator, lparen, number_rule, rparen>>> {};
+
+struct expression_rule : rule<std::string::const_iterator, expression_rule,
+                             and_<std::string::const_iterator, term_rule,
+                                 zero_or_more_<std::string::const_iterator,
+                                             and_<std::string::const_iterator, plus, term_rule>>>> {};
 
 void demonstrate_expression_parsing() {
   std::cout << "\n=== Expression Parsing Example ===" << std::endl;
@@ -47,16 +48,12 @@ void demonstrate_expression_parsing() {
   for (const auto &expr : test_expressions) {
     std::cout << "Parsing: '" << expr << "'" << std::endl;
 
-    auto begin = expr.begin();
-    auto end = expr.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    expression parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<expression_rule> ast;
+    bool success = stlx::parser<expression_rule>::parse(expr.cbegin(), expr.cend(), ast, false);
 
     std::cout << "Result: " << (success ? "SUCCESS" : "FAILED") << std::endl;
     if (!success) {
-      std::cout << "Errors: " << ctx.parse_errors.size() << std::endl;
+      std::cout << "Errors encountered during parsing" << std::endl;
     }
     std::cout << std::endl;
   }
@@ -69,12 +66,17 @@ using letter = characters<std::string::const_iterator, 'a', 'z'>;
 using digit = characters<std::string::const_iterator, '0', '9'>;
 using equals = character<std::string::const_iterator, '='>;
 using semicolon = character<std::string::const_iterator, ';'>;
-using space = character<std::string::const_iterator, ' '>;
 
-using identifier = one_or_more_<std::string::const_iterator, letter>;
-using number = one_or_more_<std::string::const_iterator, digit>;
-using assignment =
-    and_<std::string::const_iterator, identifier, equals, number, semicolon>;
+// Define using CRTP pattern
+struct identifier_rule : rule<std::string::const_iterator, identifier_rule,
+                              one_or_more_<std::string::const_iterator, letter>> {};
+
+struct number_rule : rule<std::string::const_iterator, number_rule,
+                         one_or_more_<std::string::const_iterator, digit>> {};
+
+struct assignment_rule : rule<std::string::const_iterator, assignment_rule,
+                             and_<std::string::const_iterator, identifier_rule,
+                                 equals, number_rule, semicolon>> {};
 
 void demonstrate_statement_parsing() {
   std::cout << "\n=== Statement Parsing Example ===" << std::endl;
@@ -85,16 +87,12 @@ void demonstrate_statement_parsing() {
   for (const auto &stmt : test_statements) {
     std::cout << "Parsing: '" << stmt << "'" << std::endl;
 
-    auto begin = stmt.begin();
-    auto end = stmt.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    assignment parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<assignment_rule> ast;
+    bool success = stlx::parser<assignment_rule>::parse(stmt.cbegin(), stmt.cend(), ast, false);
 
     std::cout << "Result: " << (success ? "SUCCESS" : "FAILED") << std::endl;
     if (!success) {
-      std::cout << "Errors: " << ctx.parse_errors.size() << std::endl;
+      std::cout << "Errors encountered during parsing" << std::endl;
     }
     std::cout << std::endl;
   }
@@ -104,22 +102,24 @@ void demonstrate_statement_parsing() {
 // JSON-like parsing example
 namespace json_example {
 using quote = character<std::string::const_iterator, '"'>;
-using colon = character<std::string::const_iterator, ':'>;
-using comma = character<std::string::const_iterator, ','>;
-using lbrace = character<std::string::const_iterator, '{'>;
-using rbrace = character<std::string::const_iterator, '}'>;
-using lbracket = character<std::string::const_iterator, '['>;
-using rbracket = character<std::string::const_iterator, ']'>;
 using letter = characters<std::string::const_iterator, 'a', 'z'>;
 using digit = characters<std::string::const_iterator, '0', '9'>;
 
-using string_char = or_<std::string::const_iterator, letter, digit,
-                        character<std::string::const_iterator, ' '>>;
-using json_string =
-    and_<std::string::const_iterator, quote,
-         zero_or_more_<std::string::const_iterator, string_char>, quote>;
-using json_number = one_or_more_<std::string::const_iterator, digit>;
-using json_value = or_<std::string::const_iterator, json_string, json_number>;
+// Define using CRTP pattern
+struct string_char_rule : rule<std::string::const_iterator, string_char_rule,
+                               or_<std::string::const_iterator, letter, digit,
+                                   character<std::string::const_iterator, ' '>>> {};
+
+struct json_string_rule : rule<std::string::const_iterator, json_string_rule,
+                              and_<std::string::const_iterator, quote,
+                                  zero_or_more_<std::string::const_iterator, string_char_rule>,
+                                  quote>> {};
+
+struct json_number_rule : rule<std::string::const_iterator, json_number_rule,
+                              one_or_more_<std::string::const_iterator, digit>> {};
+
+struct json_value_rule : rule<std::string::const_iterator, json_value_rule,
+                             or_<std::string::const_iterator, json_string_rule, json_number_rule>> {};
 
 void demonstrate_json_parsing() {
   std::cout << "\n=== JSON-like Parsing Example ===" << std::endl;
@@ -130,16 +130,12 @@ void demonstrate_json_parsing() {
   for (const auto &json : test_json) {
     std::cout << "Parsing: '" << json << "'" << std::endl;
 
-    auto begin = json.begin();
-    auto end = json.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    json_value parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<json_value_rule> ast;
+    bool success = stlx::parser<json_value_rule>::parse(json.cbegin(), json.cend(), ast, false);
 
     std::cout << "Result: " << (success ? "SUCCESS" : "FAILED") << std::endl;
     if (!success) {
-      std::cout << "Errors: " << ctx.parse_errors.size() << std::endl;
+      std::cout << "Errors encountered during parsing" << std::endl;
     }
     std::cout << std::endl;
   }
@@ -166,12 +162,8 @@ void demonstrate_regex_parsing() {
   // Test email regex
   std::cout << "Testing email regex:" << std::endl;
   for (const auto &email : test_emails) {
-    auto begin = email.begin();
-    auto end = email.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    email_regex parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<email_regex> ast;
+    bool success = stlx::parser<email_regex>::parse(email.cbegin(), email.cend(), ast, false);
     std::cout << "  '" << email << "': " << (success ? "MATCH" : "NO MATCH")
               << std::endl;
   }
@@ -179,12 +171,8 @@ void demonstrate_regex_parsing() {
   // Test phone regex
   std::cout << "\nTesting phone regex:" << std::endl;
   for (const auto &phone : test_phones) {
-    auto begin = phone.begin();
-    auto end = phone.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    phone_regex parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<phone_regex> ast;
+    bool success = stlx::parser<phone_regex>::parse(phone.cbegin(), phone.cend(), ast, false);
     std::cout << "  '" << phone << "': " << (success ? "MATCH" : "NO MATCH")
               << std::endl;
   }
@@ -192,12 +180,8 @@ void demonstrate_regex_parsing() {
   // Test IP regex
   std::cout << "\nTesting IP regex:" << std::endl;
   for (const auto &ip : test_ips) {
-    auto begin = ip.begin();
-    auto end = ip.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    ip_regex parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<ip_regex> ast;
+    bool success = stlx::parser<ip_regex>::parse(ip.cbegin(), ip.cend(), ast, false);
     std::cout << "  '" << ip << "': " << (success ? "MATCH" : "NO MATCH")
               << std::endl;
   }
@@ -210,11 +194,13 @@ using letter = characters<std::string::const_iterator, 'a', 'z'>;
 using digit = characters<std::string::const_iterator, '0', '9'>;
 using underscore = character<std::string::const_iterator, '_'>;
 
-using identifier_char =
-    or_<std::string::const_iterator, letter, digit, underscore>;
-using identifier =
-    and_<std::string::const_iterator, letter,
-         zero_or_more_<std::string::const_iterator, identifier_char>>;
+// Define using CRTP pattern
+struct identifier_char_rule : rule<std::string::const_iterator, identifier_char_rule,
+                                    or_<std::string::const_iterator, letter, digit, underscore>> {};
+
+struct identifier_rule : rule<std::string::const_iterator, identifier_rule,
+                              and_<std::string::const_iterator, letter,
+                                  zero_or_more_<std::string::const_iterator, identifier_char_rule>>> {};
 
 void demonstrate_combinator_parsing() {
   std::cout << "\n=== Combinator Parsing Example ===" << std::endl;
@@ -225,12 +211,8 @@ void demonstrate_combinator_parsing() {
   for (const auto &ident : test_identifiers) {
     std::cout << "Parsing identifier: '" << ident << "'" << std::endl;
 
-    auto begin = ident.begin();
-    auto end = ident.end();
-    context<std::string::const_iterator> ctx(begin, end);
-
-    identifier parser;
-    bool success = parser.parse(ctx, begin, end);
+    std::shared_ptr<identifier_rule> ast;
+    bool success = stlx::parser<identifier_rule>::parse(ident.cbegin(), ident.cend(), ast, false);
 
     std::cout << "Result: " << (success ? "VALID" : "INVALID") << std::endl;
     std::cout << std::endl;
