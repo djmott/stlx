@@ -82,8 +82,7 @@ TEST_F(ABasicGrammarTest, ParseInputStatement) {
 }
 
 TEST_F(ABasicGrammarTest, ParseIfStatement) {
-    // IF statement format: IF <cond> THEN \n <statements> ELSE \n <statements> ENDIF
-    std::string input = " IF x > 5 THEN \n PRINT \"high\" \n ELSE \n PRINT \"low\" \n ENDIF ";
+    std::string input = " IF x > 5 THEN PRINT \"high\" ELSE PRINT \"low\" ENDIF ";
     
     std::shared_ptr<if_statement> ast;
     bool result = stlx::parser<if_statement>::parse(input.cbegin(), input.cend(), ast);
