@@ -30,11 +30,11 @@ STRING(dash_color, "--color=");
 STRING(dash_prime, "--prime=");
 
 // Rules
-using rgb = or_<red, green, blue>;
-using prime_num = or_<one, three, five>;
-using color_param = and_<dash_color, rgb>;
-using prime_param = and_<dash_prime, prime_num>;
-using parameter = or_<color_param, prime_param>;
+using rgb = or_<std::string::const_iterator, red, green, blue>;
+using prime_num = or_<std::string::const_iterator, one, three, five>;
+using color_param = and_<std::string::const_iterator, dash_color, rgb>;
+using prime_param = and_<std::string::const_iterator, dash_prime, prime_num>;
+using parameter = or_<std::string::const_iterator, color_param, prime_param>;
 } // namespace command_line
 
 class Parser1Test : public ::testing::Test {

@@ -8,7 +8,7 @@ add_executable(stlx_tests
     test_xstring.cpp
     test_simple.cpp
     test_parser.cpp
-    # test_parser1.cpp  # Temporarily disabled - iterator type issues
+    # test_parser1.cpp  # Disabled - parser design mismatch, needs refactoring
 )
 
 # Link with GTest and STLX library

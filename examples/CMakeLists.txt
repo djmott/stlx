@@ -32,7 +32,7 @@ if(NOT SANITIZER_TYPE STREQUAL "None")
     apply_sanitizers(parser_examples)
 endif()
 
-# Command line parser example (temporarily disabled - iterator type issues)
+# Command line parser example (disabled - needs refactoring for STLX parser design)
 # add_executable(parser1 complex/parser1.cpp)
 # target_link_libraries(parser1 stlx)
 
