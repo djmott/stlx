@@ -32,6 +32,15 @@ if(NOT SANITIZER_TYPE STREQUAL "None")
     apply_sanitizers(parser_examples)
 endif()
 
+# Parse tree demo example
+add_executable(parse_tree_demo parse_tree_demo.cpp)
+target_link_libraries(parse_tree_demo stlx)
+
+# Apply sanitizers if requested
+if(NOT SANITIZER_TYPE STREQUAL "None")
+    apply_sanitizers(parse_tree_demo)
+endif()
+
 # BASIC grammar parse tree example
 add_executable(abasic_parse_tree_example abasic_parse_tree_example.cpp)
 target_link_libraries(abasic_parse_tree_example stlx)
@@ -51,6 +60,6 @@ endif()
 # endif()
 
 # Set output directories
-set_target_properties(hello_world complex_example parser_examples abasic_parse_tree_example PROPERTIES
+set_target_properties(hello_world complex_example parser_examples parse_tree_demo abasic_parse_tree_example PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )

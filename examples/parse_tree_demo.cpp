@@ -9,10 +9,10 @@
 using namespace stlx::parse;
 
 // Simple number parser for demonstration
-using digit = characters<std::string::iterator, '0', '9'>;
-using number_literal = one_or_more_<std::string::iterator, digit>;
+using digit = characters<std::string::const_iterator, '0', '9'>;
+using number_literal = one_or_more_<std::string::const_iterator, digit>;
 
-struct number_rule : rule<std::string::iterator, number_rule, number_literal> {};
+struct number_rule : rule<std::string::const_iterator, number_rule, number_literal> {};
 
 int main() {
     std::cout << "=== Parse Tree Printer Demo ===\n\n";
@@ -22,9 +22,9 @@ int main() {
     std::cout << "Input: \"" << input << "\"\n\n";
 
     number_rule parser;
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::iterator> ctx(begin, end, false);
+    auto begin = input.cbegin();
+    auto end = input.cend();
+    context<std::string::const_iterator> ctx(begin, end, false);
 
     if (parser.parse(ctx, begin, end)) {
         std::cout << "Parse successful!\n";
@@ -34,8 +34,10 @@ int main() {
         std::cout << "Parse failed.\n";
     }
 
-    std::cout << "\nNote: Full AST generation requires extended parser implementation.\n";
-    std::cout << "The parse_tree_printer.hpp provides the framework for AST building.\n";
+    std::cout << "\n";
+    
+    // Use print_parse_tree to display the AST  
+    print_parse_tree<number_rule>(input);
 
     return 0;
 }
