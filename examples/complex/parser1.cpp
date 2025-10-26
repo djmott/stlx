@@ -1,9 +1,11 @@
 /**
  * @file parser1.cpp
- * @brief Demonstrates a simple command line parser using STLX parser combinators
+ * @brief Demonstrates a simple command line parser using STLX parser
+ * combinators
  *
  * This example shows how to parse command-line arguments using the STLX parser
- * combinator library. It demonstrates parsing color and prime number parameters.
+ * combinator library. It demonstrates parsing color and prime number
+ * parameters.
  *
  * @copyright Copyright (c) 2025 David Mott
  * @license Distributed under the Boost Software License, Version 1.0.
@@ -11,8 +13,8 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
-#include <iostream>
 #include "stlx/parser.hpp"
+#include <iostream>
 
 namespace command_line {
 using namespace stlx::parse;
@@ -34,7 +36,7 @@ using color_param = and_<std::string::const_iterator, dash_color, rgb>;
 using prime_param = and_<std::string::const_iterator, dash_prime, prime_num>;
 using parameter = or_<std::string::const_iterator, color_param, prime_param>;
 } // namespace command_line
- 
+
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " <parameter>\n"
@@ -51,8 +53,7 @@ int main(int argc, char *argv[]) {
   // The parser type alias
   using parser_t = stlx::parser<command_line::parameter>;
 
-  bool success =
-      parser_t::parse(sParam.cbegin(), sParam.cend(), oAST, errors);
+  bool success = parser_t::parse(sParam.cbegin(), sParam.cend(), oAST, errors);
 
   if (!success) {
     std::cerr << "Parse failed for input: " << sParam << "\n";
@@ -75,4 +76,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
- 

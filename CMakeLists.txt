@@ -15,8 +15,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 
 # Options for sanitizers and analysis tools
-set(SANITIZER_TYPE "None" CACHE STRING "Sanitizer type: None, Address, UndefinedBehavior, Thread, Leak, Memory, All")
-set_property(CACHE SANITIZER_TYPE PROPERTY STRINGS "None" "Address" "UndefinedBehavior" "Thread" "Leak" "Memory" "All")
+# NOTE: Only ONE sanitizer type can be enabled at a time
+set(SANITIZER_TYPE "None" CACHE STRING "Sanitizer type: None, Address, UndefinedBehavior, Thread, Leak, Memory")
+set_property(CACHE SANITIZER_TYPE PROPERTY STRINGS "None" "Address" "UndefinedBehavior" "Thread" "Leak" "Memory")
 
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
@@ -251,7 +252,7 @@ if(REPORT_TARGETS)
     # Create summary report
     add_custom_target(report-summary
         COMMAND ${CMAKE_COMMAND} -E echo "=== STLX Analysis Reports Summary ===" > ${CMAKE_BINARY_DIR}/reports/summary.txt
-        COMMAND ${CMAKE_COMMAND} -E echo "Generated on: $(date)" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
+        COMMAND ${CMAKE_COMMAND} -E echo "Generated on: $$(date)" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
         COMMAND ${CMAKE_COMMAND} -E echo "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
         COMMAND ${CMAKE_COMMAND} -E echo "C++ Standard: ${CMAKE_CXX_STANDARD}" >> ${CMAKE_BINARY_DIR}/reports/summary.txt
         COMMAND ${CMAKE_COMMAND} -E echo "" >> ${CMAKE_BINARY_DIR}/reports/summary.txt

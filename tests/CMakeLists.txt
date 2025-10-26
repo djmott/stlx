@@ -8,6 +8,7 @@ add_executable(stlx_tests
     test_xstring.cpp
     test_simple.cpp
     test_parser.cpp
+    test_abasic.cpp
     # test_parser1.cpp  # Disabled - parser design mismatch, needs refactoring
 )
 
