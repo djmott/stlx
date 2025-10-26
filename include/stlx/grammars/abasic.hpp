@@ -125,6 +125,170 @@ struct expression
     : rule<std::string::iterator, additive_expression> {
 };
 
+// Comparison operators
+using eq_op = and_<std::string::iterator, eq, eq>;
+using ne_op = and_<std::string::iterator, character<std::string::iterator, '!'>, eq>;
+using le_op = and_<std::string::iterator, lt, eq>;
+using ge_op = and_<std::string::iterator, gt, eq>;
+
+struct comparison_expression
+    : rule<std::string::iterator,
+           or_<std::string::iterator,
+               expression,
+               and_<std::string::iterator, expression, eq_op, expression>,
+               and_<std::string::iterator, expression, ne_op, expression>,
+               and_<std::string::iterator, expression, lt, expression>,
+               and_<std::string::iterator, expression, gt, expression>,
+               and_<std::string::iterator, expression, le_op, expression>,
+               and_<std::string::iterator, expression, ge_op, expression>>> {
+};
+
+// Statements
+struct assignment_statement;
+struct print_statement;
+struct input_statement;
+struct if_statement;
+struct for_statement;
+struct while_statement;
+struct goto_statement;
+struct gosub_statement;
+struct return_statement;
+struct end_statement;
+
+// Forward declaration for statement sequence
+struct statement_sequence;
+
+// Assignment: LET identifier = expression
+struct assignment_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _let, whitespace,
+                identifier_literal, whitespace,
+                eq, whitespace,
+                expression>> {
+};
+
+// PRINT expression
+struct print_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _print, whitespace,
+                expression>> {
+};
+
+// INPUT identifier
+struct input_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _input, whitespace,
+                identifier_literal>> {
+};
+
+// IF comparison THEN ... ELSE ... ENDIF
+struct if_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _if, whitespace,
+                comparison_expression, whitespace,
+                _then, whitespace,
+                statement_sequence, whitespace,
+                _else, whitespace,
+                statement_sequence, whitespace,
+                _endif>> {
+};
+
+// FOR identifier = expression TO expression STEP expression ... NEXT
+struct for_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _for, whitespace,
+                identifier_literal, whitespace,
+                eq, whitespace,
+                expression, whitespace,
+                _to, whitespace,
+                expression, whitespace,
+                _step, whitespace,
+                expression, whitespace,
+                statement_sequence, whitespace,
+                _next, whitespace,
+                identifier_literal>> {
+};
+
+// WHILE comparison ... WEND
+struct while_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _while, whitespace,
+                comparison_expression, whitespace,
+                statement_sequence, whitespace,
+                _wend>> {
+};
+
+// GOTO identifier
+struct goto_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _goto, whitespace,
+                identifier_literal>> {
+};
+
+// GOSUB identifier
+struct gosub_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _gosub, whitespace,
+                identifier_literal>> {
+};
+
+// RETURN
+struct return_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _return>> {
+};
+
+// END
+struct end_statement
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                whitespace,
+                _end>> {
+};
+
+// Statement sequence (one or more statements)
+struct statement_sequence
+    : rule<std::string::iterator,
+           one_or_more_<std::string::iterator,
+                        or_<std::string::iterator,
+                            assignment_statement,
+                            print_statement,
+                            input_statement,
+                            if_statement,
+                            for_statement,
+                            while_statement,
+                            goto_statement,
+                            gosub_statement,
+                            return_statement,
+                            end_statement>>> {
+};
+
+// Program (statement sequence with optional trailing whitespace)
+struct basic_program
+    : rule<std::string::iterator,
+           and_<std::string::iterator,
+                statement_sequence,
+                whitespace>> {
+};
+
 }  // namespace basic
 }  // namespace stlx::grammars
 
