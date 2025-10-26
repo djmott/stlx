@@ -262,8 +262,9 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, not_<Iterator, _head_t, _tail_ts...>>;
 
-  // Default constructor for combinators
-  not_() : rule<Iterator, not_<Iterator, _head_t, _tail_ts...>>() {}
+  // Constructor for combinators with matched text range
+  not_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, not_<Iterator, _head_t, _tail_ts...>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
@@ -283,9 +284,9 @@ public:
       return false;
     }
     
-    // Child did NOT parse - NOT succeeds
+    // Child did NOT parse - NOT succeeds (empty match: backup to backup)
     begin = backup;
-    ast = std::make_shared<not_<Iterator, _head_t, _tail_ts...>>();
+    ast = std::make_shared<not_<Iterator, _head_t, _tail_ts...>>(backup, backup);
     return true;
   }
 };
@@ -331,8 +332,9 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, and_<Iterator, _head_t, _tail_ts...>>;
 
-  // Default constructor for combinators
-  and_() : rule<Iterator, and_<Iterator, _head_t, _tail_ts...>>() {}
+  // Constructor for combinators with matched text range
+  and_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, and_<Iterator, _head_t, _tail_ts...>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
@@ -354,8 +356,10 @@ public:
       return false;
     }
 
-    // All children parsed - create instance
-    ast = std::make_shared<and_<Iterator, _head_t, _tail_ts...>>();
+    // All children parsed - create instance with matched text range
+    Iterator match_start = backup;
+    Iterator match_end = begin;
+    ast = std::make_shared<and_<Iterator, _head_t, _tail_ts...>>(match_start, match_end);
     for (auto& child : child_asts) {
       ast->push_back(child);
     }
@@ -404,8 +408,9 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, or_<Iterator, _head_t, _tail_ts...>>;
 
-  // Default constructor for combinators
-  or_() : rule<Iterator, or_<Iterator, _head_t, _tail_ts...>>() {}
+  // Constructor for combinators with matched text range
+  or_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, or_<Iterator, _head_t, _tail_ts...>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
@@ -417,8 +422,10 @@ public:
     std::shared_ptr<rule_base<Iterator>> head_ast;
     auto head_backup = begin;
     if (_head_t::parse(ctx, begin, end, head_ast)) {
-      // Success - return this child
-      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>();
+      // Success - return this child with matched text range
+      Iterator match_start = backup;
+      Iterator match_end = begin;
+      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>(match_start, match_end);
       ast->push_back(head_ast);
       return true;
     }
@@ -431,7 +438,9 @@ public:
     // Try remaining children (_tail_ts) recursively
     std::shared_ptr<rule_base<Iterator>> tail_ast;
     if (try_parse_tail_or<Iterator, _tail_ts...>(ctx, begin, end, tail_ast)) {
-      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>();
+      Iterator match_start = backup;
+      Iterator match_end = begin;
+      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>(match_start, match_end);
       ast->push_back(tail_ast);
       return true;
     }
@@ -450,8 +459,9 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, one_or_more_<Iterator, _ty>>;
 
-  // Default constructor for combinators
-  one_or_more_() : rule<Iterator, one_or_more_<Iterator, _ty>>() {}
+  // Constructor for combinators with matched text range
+  one_or_more_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, one_or_more_<Iterator, _ty>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
@@ -493,8 +503,10 @@ public:
       child_asts.push_back(child_ast);
     }
 
-    // Create instance with all matched children
-    ast = std::make_shared<one_or_more_<Iterator, _ty>>();
+    // Create instance with all matched children and matched text range
+    Iterator match_start = backup;
+    Iterator match_end = begin;
+    ast = std::make_shared<one_or_more_<Iterator, _ty>>(match_start, match_end);
     for (auto& child : child_asts) {
       ast->push_back(child);
     }
@@ -514,12 +526,14 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_more_<Iterator, _ty>>;
 
-  // Default constructor for combinators
-  zero_or_more_() : rule<Iterator, zero_or_more_<Iterator, _ty>>() {}
+  // Constructor for combinators with matched text range
+  zero_or_more_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, zero_or_more_<Iterator, _ty>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
                     std::shared_ptr<rule_base<Iterator>>& ast) {
+    auto backup = begin;
     std::vector<std::shared_ptr<rule_base<Iterator>>> child_asts;
 
     // Try to match as many as possible (zero or more)
@@ -543,8 +557,10 @@ public:
       child_asts.push_back(child_ast);
     }
 
-    // Create instance with all matched children (may be empty)
-    ast = std::make_shared<zero_or_more_<Iterator, _ty>>();
+    // Create instance with all matched children (may be empty) and matched text range
+    Iterator match_start = backup;
+    Iterator match_end = begin;
+    ast = std::make_shared<zero_or_more_<Iterator, _ty>>(match_start, match_end);
     for (auto& child : child_asts) {
       ast->push_back(child);
     }
@@ -564,8 +580,9 @@ public:
   using iterator_type = Iterator;
   using _super_t = rule<Iterator, zero_or_one_<Iterator, _ty>>;
 
-  // Default constructor for combinators
-  zero_or_one_() : rule<Iterator, zero_or_one_<Iterator, _ty>>() {}
+  // Constructor for combinators with matched text range
+  zero_or_one_(Iterator matched_begin, Iterator matched_end)
+    : rule<Iterator, zero_or_one_<Iterator, _ty>>(matched_begin, matched_end) {}
 
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
@@ -584,8 +601,10 @@ public:
       begin = backup; // Reset if didn't match
     }
 
-    // Create instance (may have zero or one child)
-    ast = std::make_shared<zero_or_one_<Iterator, _ty>>();
+    // Create instance (may have zero or one child) with matched text range
+    Iterator match_start = backup;
+    Iterator match_end = begin;
+    ast = std::make_shared<zero_or_one_<Iterator, _ty>>(match_start, match_end);
     for (auto& child : child_asts) {
       ast->push_back(child);
     }
@@ -928,6 +947,9 @@ public:
     if (success) {
       // Cast the base AST to the concrete rule type
       ast = std::static_pointer_cast<_rule_t>(ast_base);
+    } else {
+      // Copy errors from context only on failure
+      errors = ctx.parse_errors;
     }
     
     return success;

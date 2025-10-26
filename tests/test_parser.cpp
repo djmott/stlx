@@ -250,7 +250,7 @@ TEST_F(ParserTest, ParserTypeMethod) {
   if (ast) {
     EXPECT_EQ(ast->type(), typeid(test_rule));
     EXPECT_TRUE(ast->isa(typeid(test_rule)));
-    EXPECT_TRUE(ast->isa(typeid(ast)));
+    EXPECT_TRUE(ast->isa(typeid(*ast)));
   }
 }
 
