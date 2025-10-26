@@ -48,6 +48,17 @@ TEST_F(ParserTest, CharacterParsing) {
   char_a parser;
   EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
   EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  
+  // Test type() method
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(char_a)) << "type() should return char_a type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(char_a))) << "isa() should identify char_a";
+  
+  // Test name() method
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
 }
 
 // Test string parsing
@@ -69,6 +80,17 @@ TEST_F(ParserTest, StringParsing) {
   char_h parser;
   EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
   EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  
+  // Test type() method
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(char_h)) << "type() should return char_h type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(char_h))) << "isa() should identify char_h";
+  
+  // Test name() method
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
 }
 
 // Test OR combinator
@@ -102,6 +124,19 @@ TEST_F(ParserTest, OrCombinator) {
   EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
   EXPECT_TRUE(parser.parse(ctx2, begin2, end2));
   EXPECT_FALSE(parser.parse(ctx3, begin3, end3));
+  
+  // Test type() method
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(or_<std::string::iterator>)) 
+      << "type() should return or_ type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(or_<std::string::iterator>))) 
+      << "isa() should identify or_";
+  
+  // Test name() method
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
 }
 
 // Test AND combinator
@@ -129,6 +164,19 @@ TEST_F(ParserTest, AndCombinator) {
 
   EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
   EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  
+  // Test type() method
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(and_<std::string::iterator>)) 
+      << "type() should return and_ type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(and_<std::string::iterator>))) 
+      << "isa() should identify and_";
+  
+  // Test name() method
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
 }
 
 // Test NOT combinator
@@ -154,6 +202,19 @@ TEST_F(ParserTest, NotCombinator) {
 
   EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
   EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  
+  // Test type() method
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(not_<std::string::iterator>)) 
+      << "type() should return not_ type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(not_<std::string::iterator>))) 
+      << "isa() should identify not_";
+  
+  // Test name() method
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
 }
 
 // Test ZERO_OR_MORE combinator

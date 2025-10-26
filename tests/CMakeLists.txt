@@ -9,7 +9,7 @@ add_executable(stlx_tests
     test_simple.cpp
     test_parser.cpp
     test_abasic.cpp
-    # test_parser1.cpp  # Disabled - parser design mismatch, needs refactoring
+    # test_parser1.cpp  # Disabled - parser grammar design issue, needs refactoring
 )
 
 # Link with GTest and STLX library
