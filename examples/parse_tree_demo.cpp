@@ -36,8 +36,15 @@ int main() {
 
     std::cout << "\n";
     
-    // Use print_parse_tree to display the AST  
-    print_parse_tree<number_rule>(input);
+    // Create AST using the parser
+    std::shared_ptr<number_rule> ast;
+    if (stlx::parser<number_rule>::parse(input.cbegin(), input.cend(), ast)) {
+        // Display the AST
+        print_parse_tree<number_rule, std::string::const_iterator>(
+            std::static_pointer_cast<rule_base<std::string::const_iterator>>(ast));
+    } else {
+        std::cout << "Could not generate AST for display.\n";
+    }
 
     return 0;
 }

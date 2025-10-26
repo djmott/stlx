@@ -157,21 +157,31 @@ private:
     
 };
 
-// Helper function to parse and print AST in one call
+// Helper function to print a fully constructed AST
 template <typename GrammarRule, typename Iterator = std::string::const_iterator>
-void print_parse_tree(const std::string& input) {
+void print_parse_tree(const std::shared_ptr<rule_base<Iterator>>& ast) {
     using printer_type = parse_tree_printer<GrammarRule, Iterator>;
     printer_type printer;
     
+    if (ast) {
+        std::cout << "\n=== Parse Tree ===\n\n";
+        printer.print_ast(ast);
+        std::cout << "\n=== Compact Format ===\n\n";
+        printer.print_ast_compact(ast);
+        std::cout << "\n";
+        printer.print_statistics(ast);
+    } else {
+        std::cout << "No AST provided.\n";
+    }
+}
+
+// Overload that parses from string and then prints
+template <typename GrammarRule, typename Iterator = std::string::const_iterator>
+void print_parse_tree(const std::string& input) {
     std::shared_ptr<GrammarRule> ast;
     
     if (parser<GrammarRule>::parse(input.cbegin(), input.cend(), ast)) {
-        std::cout << "\n=== Parse Tree ===\n\n";
-        printer.print_ast(std::static_pointer_cast<rule_base<Iterator>>(ast));
-        std::cout << "\n=== Compact Format ===\n\n";
-        printer.print_ast_compact(std::static_pointer_cast<rule_base<Iterator>>(ast));
-        std::cout << "\n";
-        printer.print_statistics(std::static_pointer_cast<rule_base<Iterator>>(ast));
+        print_parse_tree<GrammarRule, Iterator>(std::static_pointer_cast<rule_base<Iterator>>(ast));
     } else {
         std::cout << "Parse failed - no AST generated.\n";
     }
