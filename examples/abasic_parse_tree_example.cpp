@@ -38,15 +38,10 @@ int main() {
     std::cout << "Input: \"" << expr1 << "\"\n\n";
 
     {
-        primary_expression parser;
-        std::string::const_iterator begin = expr1.cbegin();
-        std::string::const_iterator end = expr1.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<primary_expression> ast;
+        if (stlx::parser<primary_expression>::parse(expr1.cbegin(), expr1.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
-            std::cout << "Matched: \"" << std::string(expr1.cbegin(), begin)
-                      << "\"\n";
+            std::cout << "Matched: \"" << ast->get_text() << "\"\n";
         } else {
             std::cout << "✗ Parse failed.\n";
         }
@@ -60,15 +55,10 @@ int main() {
     std::cout << "Input: \"" << expr2 << "\"\n\n";
 
     {
-        assignment_statement parser;
-        std::string::const_iterator begin = expr2.cbegin();
-        std::string::const_iterator end = expr2.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<assignment_statement> ast;
+        if (stlx::parser<assignment_statement>::parse(expr2.cbegin(), expr2.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
-            std::cout << "Matched: \"" << std::string(expr2.cbegin(), begin)
-                      << "\"\n";
+            std::cout << "Matched: \"" << ast->get_text() << "\"\n";
         } else {
             std::cout << "✗ Parse failed.\n";
         }
@@ -82,15 +72,10 @@ int main() {
     std::cout << "Input: \"" << expr3 << "\"\n\n";
 
     {
-        expression parser;
-        std::string::const_iterator begin = expr3.cbegin();
-        std::string::const_iterator end = expr3.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<expression> ast;
+        if (stlx::parser<expression>::parse(expr3.cbegin(), expr3.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
-            std::cout << "Matched: \"" << std::string(expr3.cbegin(), begin)
-                      << "\"\n";
+            std::cout << "Matched: \"" << ast->get_text() << "\"\n";
         } else {
             std::cout << "✗ Parse failed.\n";
         }
@@ -104,15 +89,10 @@ int main() {
     std::cout << "Input: \"" << expr4 << "\"\n\n";
 
     {
-        if_statement parser;
-        std::string::const_iterator begin = expr4.cbegin();
-        std::string::const_iterator end = expr4.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<if_statement> ast;
+        if (stlx::parser<if_statement>::parse(expr4.cbegin(), expr4.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
-            std::cout << "Matched: \""
-                      << std::string(expr4.cbegin(), begin) << "\"\n";
+            std::cout << "Matched: \"" << ast->get_text() << "\"\n";
         } else {
             std::cout << "✗ Parse failed.\n";
         }
@@ -126,15 +106,10 @@ int main() {
     std::cout << "Input: \"" << expr5 << "\"\n\n";
 
     {
-        for_statement parser;
-        std::string::const_iterator begin = expr5.cbegin();
-        std::string::const_iterator end = expr5.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<for_statement> ast;
+        if (stlx::parser<for_statement>::parse(expr5.cbegin(), expr5.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
-            std::cout << "Matched: \"" << std::string(expr5.cbegin(), begin)
-                      << "\"\n";
+            std::cout << "Matched: \"" << ast->get_text() << "\"\n";
         } else {
             std::cout << "✗ Parse failed.\n";
         }
@@ -166,25 +141,15 @@ int main() {
     std::cout << "Program:\n" << program << "\n";
 
     {
-        basic_parser parser;
-        std::string::const_iterator begin = program.cbegin();
-        std::string::const_iterator end = program.cend();
-        context<std::string::const_iterator> ctx(begin, end, false);
-
-        if (parser.parse(ctx, begin, end)) {
+        std::shared_ptr<basic_parser> ast;
+        if (stlx::parser<basic_parser>::parse(program.cbegin(), program.cend(), ast)) {
             std::cout << "✓ Parse successful!\n";
             std::cout << "Matched program length: "
-                      << std::distance(program.cbegin(), begin) << " characters\n";
+                      << std::distance(program.cbegin(), program.cend()) << " characters\n";
 
-            // Create AST using the parser
-            std::shared_ptr<basic_parser> ast;
-            if (stlx::parser<basic_parser>::parse(program.cbegin(), program.cend(), ast)) {
-                std::cout << "✓ AST generated successfully!\n\n";
-                // Generate and display AST using parse_tree_printer
-                print_parse_tree<basic_parser, std::string::const_iterator>(std::static_pointer_cast<rule_base<std::string::const_iterator>>(ast));
-            } else {
-                std::cout << "✗ AST generation failed.\n";
-            }
+            std::cout << "✓ AST generated successfully!\n\n";
+            // Generate and display AST using parse_tree_printer
+            print_parse_tree<basic_parser, std::string::const_iterator>(std::static_pointer_cast<rule_base<std::string::const_iterator>>(ast));
         } else {
             std::cout << "✗ Parse failed.\n";
         }

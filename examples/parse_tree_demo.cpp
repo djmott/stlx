@@ -21,15 +21,12 @@ int main() {
     std::string input = "123";
     std::cout << "Input: \"" << input << "\"\n\n";
 
-    number_rule parser;
-    auto begin = input.cbegin();
-    auto end = input.cend();
-    context<std::string::const_iterator> ctx(begin, end, false);
-
-    if (parser.parse(ctx, begin, end)) {
+    // Use static parse method instead of instance method
+    std::shared_ptr<number_rule> ast_test;
+    if (stlx::parser<number_rule>::parse(input.cbegin(), input.cend(), ast_test)) {
         std::cout << "Parse successful!\n";
         std::cout << "Matched: \"" << input << "\"\n";
-        std::cout << "Rule type: " << typeid(parser).name() << "\n";
+        std::cout << "Rule type: " << ast_test->name() << "\n";
     } else {
         std::cout << "Parse failed.\n";
     }

@@ -42,6 +42,13 @@ using whitespace = zero_or_more_<std::string::const_iterator, whitespace_char>;
 // Literals
 struct number_literal : rule<std::string::const_iterator, number_literal,
                             one_or_more_<std::string::const_iterator, digit>> {
+  static bool parse(parse::context<std::string::const_iterator> &ctx,
+                    std::string::const_iterator &begin,
+                    std::string::const_iterator &end,
+                    std::shared_ptr<parse::rule_base<std::string::const_iterator>> &ast) {
+    // Delegate to the implementation type
+    return impl_type::parse(ctx, begin, end, ast);
+  }
 };
 using identifier_char = or_<std::string::const_iterator, letter_lower, letter_upper, digit>;
 using identifier_literal = and_<std::string::const_iterator, 
