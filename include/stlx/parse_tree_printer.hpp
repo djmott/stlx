@@ -63,7 +63,7 @@ public:
 };
 
 // Template class for generating and printing AST
-template <typename Iterator, typename GrammarRule>
+template <typename GrammarRule, typename Iterator = std::string::const_iterator>
 class parse_tree_printer {
 public:
     using iterator_type = Iterator;
@@ -76,18 +76,28 @@ public:
 
     // Parse input and generate AST
     [[nodiscard]] node_ptr parse_to_ast(const std::string& input) {
-        grammar_type grammar;
-        // Create a mutable copy for iterators
+        // Create mutable copy for parsing (grammar uses iterator)
         std::string mutable_input = input;
-        typename std::string::iterator begin = mutable_input.begin();
-        typename std::string::iterator end = mutable_input.end();
-        context_type ctx(begin, end, false);  // Don't ignore whitespace for AST
-
-        if (grammar.parse(ctx, begin, end)) {
-            // Create a simple AST node for the root with proper name from parser
-            std::string rule_name = grammar.name();
-            return std::make_shared<node_type>(typeid(grammar), rule_name,
-                                                mutable_input.begin(), begin);
+        
+        // Use the parser class to generate the actual AST
+        using parser_t = parser<grammar_type>;
+        std::shared_ptr<grammar_type> ast;
+        
+        // Parse with mutable iterators
+        if (parser_t::parse(mutable_input.begin(), mutable_input.end(), ast)) {
+            // Create root node from the AST
+            std::string rule_name = ast->name();
+            auto root = std::make_shared<node_type>(
+                typeid(grammar_type), 
+                rule_name,
+                mutable_input.cbegin(), 
+                mutable_input.cend()
+            );
+            
+            // Recursively build AST from parser's children
+            build_ast_from_rule(ast, root, mutable_input.cbegin());
+            
+            return root;
         }
         return nullptr;
     }
@@ -227,12 +237,47 @@ private:
         std::string name = extract_rule_name(child->type());
         return std::make_shared<node_type>(child->type(), name, start, end);
     }
+    
+    // Recursively build AST from parser's internal tree structure
+    void build_ast_from_rule(const std::shared_ptr<grammar_type>& rule, 
+                            node_ptr parent, typename std::string::const_iterator input_start) {
+        if (!rule || !parent) {
+            return;
+        }
+        
+        // Get the matched text from the rule
+        std::string_view matched_text_sv = rule->get_text();
+        std::string matched_text(matched_text_sv.begin(), matched_text_sv.end());
+        std::string rule_name = rule->name();
+        
+        // Create a child node for this rule
+        auto child_node = std::make_shared<node_type>(
+            rule->type(), 
+            rule_name,
+            input_start,
+            input_start + matched_text.size()
+        );
+        
+        child_node->matched_text = matched_text;
+        parent->add_child(child_node);
+        
+        // Recursively process children
+        for (size_t i = 0; i < rule->size(); ++i) {
+            if ((*rule)[i]) {
+                // Cast the child to the grammar rule type and recursively build
+                auto child_rule = std::dynamic_pointer_cast<grammar_type>((*rule)[i]);
+                if (child_rule) {
+                    build_ast_from_rule(child_rule, child_node, input_start);
+                }
+            }
+        }
+    }
 };
 
 // Helper function to parse and print AST in one call
-template <typename Iterator, typename GrammarRule>
+template <typename GrammarRule, typename Iterator = std::string::const_iterator>
 void print_parse_tree(const std::string& input) {
-    parse_tree_printer<Iterator, GrammarRule> printer;
+    parse_tree_printer<GrammarRule, Iterator> printer;
     auto ast = printer.parse_to_ast(input);
 
     if (ast) {

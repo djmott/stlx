@@ -24,7 +24,7 @@ TEST_F(ABasicGrammarTest, ParseNumber) {
     std::string input = "123";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     digit child;
     number_literal parser(std::make_shared<digit>(child));
@@ -37,7 +37,7 @@ TEST_F(ABasicGrammarTest, ParsePrimaryExpression_Number) {
     std::string input = "42";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     primary_expression parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -47,7 +47,7 @@ TEST_F(ABasicGrammarTest, ParseUnaryExpression) {
     std::string input = "-42";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     unary_expression parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -57,7 +57,7 @@ TEST_F(ABasicGrammarTest, ParseAssignmentStatement) {
     std::string input = " LET x = 42 ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     assignment_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -67,7 +67,7 @@ TEST_F(ABasicGrammarTest, ParsePrintStatement) {
     std::string input = " PRINT 123 ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     print_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -77,7 +77,7 @@ TEST_F(ABasicGrammarTest, ParseInputStatement) {
     std::string input = " INPUT name ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     input_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -87,7 +87,7 @@ TEST_F(ABasicGrammarTest, ParseIfStatement) {
     std::string input = " IF x > 5 THEN PRINT \"high\" ELSE PRINT \"low\" ENDIF ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     if_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -97,7 +97,7 @@ TEST_F(ABasicGrammarTest, ParseForLoop) {
     std::string input = " FOR i = 1 TO 10 STEP 1 LET x = i * 2 NEXT i ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     for_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -107,7 +107,7 @@ TEST_F(ABasicGrammarTest, ParseWhileLoop) {
     std::string input = " WHILE x < 10 LET x = x + 1 WEND ";
     auto begin = input.begin();
     auto end = input.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     while_statement parser;
     EXPECT_TRUE(parser.parse(ctx, begin, end));
@@ -135,7 +135,7 @@ TEST_F(ABasicGrammarTest, ParseCompleteProgram) {
     
     auto begin = program.begin();
     auto end = program.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     basic_program rule_parser;
     EXPECT_TRUE(rule_parser.parse(ctx, begin, end));
@@ -181,7 +181,7 @@ TEST_F(ABasicGrammarTest, ParseComplexProgramWithAllFeatures) {
     
     auto begin = program.begin();
     auto end = program.end();
-    context<std::string::iterator> ctx(begin, end);
+    context<std::string::const_iterator> ctx(begin, end);
     
     basic_program rule_parser;
     EXPECT_TRUE(rule_parser.parse(ctx, begin, end));
