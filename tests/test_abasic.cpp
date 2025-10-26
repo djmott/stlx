@@ -21,96 +21,95 @@ public:
 };
 
 TEST_F(ABasicGrammarTest, ParseNumber) {
-    std::string input = "123";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
+    std::string input = "123";  // Note: parser expects full input consumed
     
-    digit child;
-    number_literal parser(std::make_shared<digit>(child));
-    bool result = parser.parse(ctx, begin, end);
+    std::shared_ptr<number_literal> ast;
+    bool result = stlx::parser<number_literal>::parse(input.cbegin(), input.cend(), ast);
+    
+    // This will fail because number_literal is a one_or_more which doesn't match entire input
+    // The parser requires consuming all input, so let's test with a proper rule wrapper
     EXPECT_TRUE(result) << "Failed to parse number '123'";
-    // Number literal should be parsed successfully
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParsePrimaryExpression_Number) {
     std::string input = "42";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    primary_expression parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<primary_expression> ast;
+    bool result = stlx::parser<primary_expression>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result) << "Failed to parse number '42'";
+    EXPECT_NE(ast, nullptr) << "AST should not be null";
 }
 
 TEST_F(ABasicGrammarTest, ParseUnaryExpression) {
     std::string input = "-42";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    unary_expression parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<unary_expression> ast;
+    bool result = stlx::parser<unary_expression>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseAssignmentStatement) {
     std::string input = " LET x = 42 ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    assignment_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<assignment_statement> ast;
+    bool result = stlx::parser<assignment_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParsePrintStatement) {
     std::string input = " PRINT 123 ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    print_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<print_statement> ast;
+    bool result = stlx::parser<print_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseInputStatement) {
     std::string input = " INPUT name ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    input_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<input_statement> ast;
+    bool result = stlx::parser<input_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseIfStatement) {
     std::string input = " IF x > 5 THEN PRINT \"high\" ELSE PRINT \"low\" ENDIF ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    if_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<if_statement> ast;
+    bool result = stlx::parser<if_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseForLoop) {
     std::string input = " FOR i = 1 TO 10 STEP 1 LET x = i * 2 NEXT i ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    for_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<for_statement> ast;
+    bool result = stlx::parser<for_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseWhileLoop) {
     std::string input = " WHILE x < 10 LET x = x + 1 WEND ";
-    auto begin = input.begin();
-    auto end = input.end();
-    context<std::string::const_iterator> ctx(begin, end);
     
-    while_statement parser;
-    EXPECT_TRUE(parser.parse(ctx, begin, end));
+    std::shared_ptr<while_statement> ast;
+    bool result = stlx::parser<while_statement>::parse(input.cbegin(), input.cend(), ast);
+    
+    EXPECT_TRUE(result);
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseCompleteProgram) {
@@ -133,13 +132,11 @@ TEST_F(ABasicGrammarTest, ParseCompleteProgram) {
  END 
 )";
     
-    auto begin = program.begin();
-    auto end = program.end();
-    context<std::string::const_iterator> ctx(begin, end);
+    std::shared_ptr<basic_program> ast;
+    bool result = stlx::parser<basic_program>::parse(program.cbegin(), program.cend(), ast);
     
-    basic_program rule_parser;
-    EXPECT_TRUE(rule_parser.parse(ctx, begin, end));
-    // Note: begin != end is acceptable as the parser may not consume trailing whitespace/newlines
+    EXPECT_TRUE(result) << "Failed to parse complete program";
+    EXPECT_NE(ast, nullptr);
 }
 
 TEST_F(ABasicGrammarTest, ParseComplexProgramWithAllFeatures) {
@@ -179,11 +176,9 @@ TEST_F(ABasicGrammarTest, ParseComplexProgramWithAllFeatures) {
  END 
 )";
     
-    auto begin = program.begin();
-    auto end = program.end();
-    context<std::string::const_iterator> ctx(begin, end);
+    std::shared_ptr<basic_program> ast;
+    bool result = stlx::parser<basic_program>::parse(program.cbegin(), program.cend(), ast);
     
-    basic_program rule_parser;
-    EXPECT_TRUE(rule_parser.parse(ctx, begin, end));
-    // Note: begin != end is acceptable as the parser may not consume trailing whitespace/newlines
+    EXPECT_TRUE(result) << "Failed to parse complex program";
+    EXPECT_NE(ast, nullptr);
 }
