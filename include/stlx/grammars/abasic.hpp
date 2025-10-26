@@ -55,13 +55,15 @@ using identifier_literal = and_<std::string::const_iterator,
                                  letter, 
                                  zero_or_more_<std::string::const_iterator, identifier_char>>;
 
-// String literals
-using quote = character<std::string::const_iterator, '"'>;
-using string_char = not_<std::string::const_iterator, quote>;
+// String literals - use or_ to match any single character except quote
+// This matches any one character that is NOT a quote
+using string_char = or_<std::string::const_iterator,
+                       characters<std::string::const_iterator, '\x00', '!'>,
+                       characters<std::string::const_iterator, '#', '\xFF'>>;
 using string_literal = and_<std::string::const_iterator, 
-                            quote, 
-                            zero_or_more_<std::string::const_iterator, string_char>, 
-                            quote>;
+                            character<std::string::const_iterator, '"'>, 
+                            zero_or_more_<std::string::const_iterator, string_char>,
+                            character<std::string::const_iterator, '"'>>;
 
 // Keywords (BASIC language)
 STRING(_let, "LET");
@@ -116,18 +118,22 @@ struct unary_expression
 
 struct multiplicative_expression
     : rule<std::string::const_iterator, multiplicative_expression,
-           or_<std::string::const_iterator,
-               unary_expression,
-               and_<std::string::const_iterator, multiplicative_expression, mult, unary_expression>,
-               and_<std::string::const_iterator, multiplicative_expression, div_op, unary_expression>>> {
+           and_<std::string::const_iterator,
+                unary_expression,
+                zero_or_more_<std::string::const_iterator,
+                             and_<std::string::const_iterator,
+                                  or_<std::string::const_iterator, mult, div_op>,
+                                  unary_expression>>>> {
 };
 
 struct additive_expression
     : rule<std::string::const_iterator, additive_expression,
-           or_<std::string::const_iterator,
-               multiplicative_expression,
-               and_<std::string::const_iterator, additive_expression, plus, multiplicative_expression>,
-               and_<std::string::const_iterator, additive_expression, minus, multiplicative_expression>>> {
+           and_<std::string::const_iterator,
+                multiplicative_expression,
+                zero_or_more_<std::string::const_iterator,
+                             and_<std::string::const_iterator,
+                                  or_<std::string::const_iterator, plus, minus>,
+                                  multiplicative_expression>>>> {
 };
 
 struct expression
@@ -167,14 +173,26 @@ struct end_statement;
 // Forward declaration for statement sequence
 struct statement_sequence;
 
+// Simple statements (no control flow) for use in control flow bodies
+using simple_statement = or_<std::string::const_iterator,
+                             assignment_statement,
+                             print_statement,
+                             input_statement,
+                             goto_statement,
+                             gosub_statement,
+                             return_statement,
+                             end_statement>;
+
+// Statement body: one or more simple statements
+using statement_body = one_or_more_<std::string::const_iterator, simple_statement>;
+
 // Assignment: LET identifier = expression
 struct assignment_statement
     : rule<std::string::const_iterator, assignment_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _let, whitespace,
-                identifier_literal, whitespace,
-                eq, whitespace,
+                _let,
+                identifier_literal,
+                eq,
                 expression>> {
 };
 
@@ -182,8 +200,7 @@ struct assignment_statement
 struct print_statement
     : rule<std::string::const_iterator, print_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _print, whitespace,
+                _print,
                 expression>> {
 };
 
@@ -191,8 +208,7 @@ struct print_statement
 struct input_statement
     : rule<std::string::const_iterator, input_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _input, whitespace,
+                _input,
                 identifier_literal>> {
 };
 
@@ -200,13 +216,12 @@ struct input_statement
 struct if_statement
     : rule<std::string::const_iterator, if_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _if, whitespace,
-                comparison_expression, whitespace,
-                _then, whitespace,
-                statement_sequence, whitespace,
-                _else, whitespace,
-                statement_sequence, whitespace,
+                _if,
+                comparison_expression,
+                _then,
+                statement_body,
+                _else,
+                statement_body,
                 _endif>> {
 };
 
@@ -214,17 +229,16 @@ struct if_statement
 struct for_statement
     : rule<std::string::const_iterator, for_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _for, whitespace,
-                identifier_literal, whitespace,
-                eq, whitespace,
-                expression, whitespace,
-                _to, whitespace,
-                expression, whitespace,
-                _step, whitespace,
-                expression, whitespace,
-                statement_sequence, whitespace,
-                _next, whitespace,
+                _for,
+                identifier_literal,
+                eq,
+                expression,
+                _to,
+                expression,
+                _step,
+                expression,
+                statement_body,
+                _next,
                 identifier_literal>> {
 };
 
@@ -232,10 +246,9 @@ struct for_statement
 struct while_statement
     : rule<std::string::const_iterator, while_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _while, whitespace,
-                comparison_expression, whitespace,
-                statement_sequence, whitespace,
+                _while,
+                comparison_expression,
+                statement_body,
                 _wend>> {
 };
 
@@ -243,8 +256,7 @@ struct while_statement
 struct goto_statement
     : rule<std::string::const_iterator, goto_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _goto, whitespace,
+                _goto,
                 identifier_literal>> {
 };
 
@@ -252,8 +264,7 @@ struct goto_statement
 struct gosub_statement
     : rule<std::string::const_iterator, gosub_statement,
            and_<std::string::const_iterator,
-                whitespace,
-                _gosub, whitespace,
+                _gosub,
                 identifier_literal>> {
 };
 
@@ -261,7 +272,6 @@ struct gosub_statement
 struct return_statement
     : rule<std::string::const_iterator, return_statement,
            and_<std::string::const_iterator,
-                whitespace,
                 _return>> {
 };
 
@@ -269,7 +279,6 @@ struct return_statement
 struct end_statement
     : rule<std::string::const_iterator, end_statement,
            and_<std::string::const_iterator,
-                whitespace,
                 _end>> {
 };
 
@@ -290,12 +299,11 @@ struct statement_sequence
                             end_statement>>> {
 };
 
-// Program (statement sequence with optional trailing whitespace followed by EOF)
+// Program (statement sequence followed by EOF)
 struct basic_program
     : rule<std::string::const_iterator, basic_program,
            and_<std::string::const_iterator,
                 statement_sequence,
-                whitespace,
                 eof<std::string::const_iterator>>> {
 };
 
