@@ -8,6 +8,46 @@
 
 A comprehensive CMake project demonstrating modern C++23 features with integrated testing, sanitizers, static/dynamic analysis tools, and code coverage support.
 
+## Quick Start
+
+### Prerequisites
+- C++23 compatible compiler (GCC 11+, Clang 14+, MSVC 19.29+)
+- CMake 3.20 or higher
+- Ninja build system (recommended) or Make
+
+### Installation
+```bash
+git clone https://github.com/djmott/stlx.git
+cd stlx
+mkdir build && cd build
+cmake -GNinja ..
+ninja
+ninja test
+```
+
+### Usage
+```cpp
+#include <stlx/stlx.hpp>
+#include <stlx/parser.hpp>      // For parser combinators
+#include <stlx/xstring.hpp>    // For extended string utilities
+#include <stlx/grammars/abasic.hpp>  // For BASIC grammar
+
+using namespace stlx;
+
+int main() {
+    // Use STLX utilities
+    std::string text = "  Hello World  ";
+    auto trimmed = trim(text);
+    
+    // Use parser combinators
+    using namespace stlx::parse;
+    character<char*> comma(',');
+    // ... parser usage ...
+    
+    return 0;
+}
+```
+
 ## CI/CD Pipeline
 
 This project includes a comprehensive GitHub Actions CI/CD pipeline that provides:
@@ -61,24 +101,35 @@ The CI pipeline tests **174+ build configurations**:
 stlx/
 ├── CMakeLists.txt              # Root CMake configuration
 ├── cmake_modules/              # Custom CMake find modules
-│   ├── Findclang-tidy.cmake
-│   ├── Findclang-format.cmake
-│   ├── Findcppcheck.cmake
-│   ├── Findvalgrind.cmake
-│   ├── Findgcovr.cmake
+│   ├── FindCLANG_TIDY.cmake
+│   ├── FindCLANG_FORMAT.cmake
+│   ├── FindCPPCHECK.cmake
+│   ├── FindCPPLINT.cmake
+│   ├── FindGCOVR.cmake
+│   ├── FindIWYU.cmake
+│   ├── FindVALGRIND.cmake
 │   └── Sanitizers.cmake
 ├── include/stlx/               # Header-only library
-│   └── stlx.hpp
+│   ├── stlx.hpp               # Main utilities header
+│   ├── parser.hpp             # Parser combinator library
+│   ├── xstring.hpp            # Extended string utilities
+│   └── grammars/
+│       └── abasic.hpp          # BASIC grammar parser
 ├── examples/                   # Sample applications
 │   ├── simple/
 │   │   └── hello_world.cpp
-│   └── complex/
-│       ├── main.cpp
-│       ├── module_a.cpp
-│       └── module_a.hpp
+│   ├── complex/
+│   │   ├── main.cpp
+│   │   ├── module_a.cpp
+│   │   └── module_a.hpp
+│   └── parser_examples.cpp
 ├── tests/                      # Test suite
-│   ├── test_main.cpp
-│   └── test_stlx.cpp
+│   ├── test_main.cpp          # Test entry point
+│   ├── test_stlx.cpp          # STLX utilities tests
+│   ├── test_parser.cpp        # Parser combinator tests
+│   ├── test_xstring.cpp       # String utilities tests
+│   ├── test_simple.cpp        # Simple utility tests
+│   └── test_abasic.cpp        # BASIC grammar tests
 └── README.md
 ```
 
@@ -109,7 +160,8 @@ Available sanitizer options:
 - `Thread`
 - `Leak`
 - `Memory`
-- `All`
+
+**Note**: Only one sanitizer can be enabled at a time.
 
 ### Build with Code Coverage
 
@@ -168,8 +220,13 @@ make
 
 ### Analysis Targets
 - `cppcheck` - Run cppcheck static analysis (if available)
+- `cpplint` - Run cpplint style checking (if available)
+- `iwyu` - Run Include What You Use analysis (if available)
+- `clang-tidy-report` - Run clang-tidy analysis (if available)
 - `format` - Format code with clang-format (if available)
 - `valgrind-tests` - Run tests with valgrind (if available)
+- `generate-all-reports` - Generate all available analysis reports
+- `report-summary` - Create summary of all analysis reports
 
 ### Coverage Targets
 - `coverage_raw` - Generate raw coverage data
@@ -180,10 +237,24 @@ make
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `SANITIZER_TYPE` | `None` | Sanitizer to enable |
-| `ENABLE_COVERAGE` | `OFF` | Enable code coverage |
-| `ENABLE_CLANG_TIDY` | `OFF` | Enable clang-tidy analysis |
-| `ENABLE_CPPCHECK` | `OFF` | Enable cppcheck analysis |
+| `SANITIZER_TYPE` | `None` | Sanitizer type (`None`, `Address`, `UndefinedBehavior`, `Thread`, `Leak`, `Memory`) |
+| `ENABLE_COVERAGE` | `OFF` | Enable code coverage with gcovr |
+| `ENABLE_CLANG_TIDY` | `OFF` | Enable clang-tidy static analysis |
+| `ENABLE_CPPCHECK` | `OFF` | Enable cppcheck static analysis |
+| `ENABLE_CPPLINT` | `OFF` | Enable cpplint style checking |
+| `ENABLE_IWYU` | `OFF` | Enable Include What You Use analysis |
+
+### Building with All Options
+```bash
+mkdir build-full
+cd build-full
+cmake -DSANITIZER_TYPE=UndefinedBehavior \
+      -DENABLE_COVERAGE=ON \
+      -DENABLE_CLANG_TIDY=ON \
+      -DENABLE_CPPCHECK=ON \
+      ..
+ninja
+```
 
 ## STLX Library Features
 
@@ -208,6 +279,73 @@ The STLX header-only library provides:
 ### Compile-time Features
 - `hash_string()` - Compile-time string hashing
 - Concepts for type safety (`StringLike`, `Numeric`, `ScopedEnum`)
+
+## Parser Combinator Library
+
+STLX includes a comprehensive parser combinator library for building recursive descent parsers:
+
+### Features
+- **Character Parsing**: Single character and character range matching
+- **String Matching**: Exact string and regex pattern matching
+- **Combinators**: AND, OR, NOT logic combinators
+- **Quantifiers**: Zero-or-more, one-or-more, zero-or-one
+- **Whitespace Handling**: Automatic whitespace skipping
+- **Error Reporting**: Detailed parse error information
+- **AST Support**: Rule-based parsing with match counting
+
+### Usage Example
+```cpp
+#include <stlx/parser.hpp>
+
+using namespace stlx::parse;
+
+// Define terminal rules
+using digit = characters<std::string::iterator, '0', '9'>;
+using plus = character<std::string::iterator, '+'>;
+
+// Define parser with child rules
+digit digit_parser;
+one_or_more_<std::string::iterator, digit> number_parser(std::make_shared<digit>(digit_parser));
+
+// Parse a string
+std::string input = "123+456";
+auto begin = input.begin();
+auto end = input.end();
+context<std::string::iterator> ctx(begin, end);
+
+bool success = number_parser.parse(ctx, begin, end);
+```
+
+## BASIC Grammar Parser
+
+STLX includes a complete BASIC-like grammar parser demonstrating complex parser construction:
+
+### Features
+- **Expressions**: Arithmetic operations with proper precedence
+- **Variables**: LET assignments and INPUT statements
+- **Control Flow**: IF/THEN/ELSE, FOR/WHILE loops
+- **I/O**: PRINT and INPUT statements
+- **Subroutines**: GOSUB/RETURN support
+- **CRTP-based**: Proper type information for debugging
+
+### Example Program
+```basic
+LET x = 10
+LET y = 20
+IF x > y THEN
+  LET result = x
+ELSE
+  LET result = y
+ENDIF
+PRINT result
+FOR i = 1 TO 5 STEP 1
+  LET sum = sum + i
+NEXT i
+WHILE x < 100
+  LET x = x * 2
+WEND
+END
+```
 
 ## Example Usage
 
@@ -238,18 +376,42 @@ int main() {
 }
 ```
 
+## Generating Analysis Reports
+
+All analysis reports are generated in the `build/reports/` directory:
+
+```bash
+cd build
+ninja generate-all-reports  # Generate all analysis reports
+ninja report-summary         # Create summary report
+
+# Reports are available in:
+ls reports/
+# - cppcheck.xml
+# - cpplint.txt
+# - iwyu.txt
+# - clang-format.txt
+# - clang-tidy.txt
+# - valgrind.xml
+# - summary.txt
+```
+
 ## Requirements
 
 ### Compiler
 - GCC 11+ or Clang 14+ with C++23 support
 - CMake 3.20+
+- Ninja build system (recommended)
 
 ### Optional Tools
-- clang-tidy (for static analysis)
-- clang-format (for code formatting)
-- cppcheck (for static analysis)
-- valgrind (for dynamic analysis)
-- gcovr or lcov (for coverage reports)
+- **clang-tidy** - Static analysis
+- **clang-format** - Code formatting
+- **cppcheck** - Static analysis
+- **cpplint** - Style checking
+- **IWYU** - Include analysis
+- **valgrind** - Dynamic analysis
+- **gcovr** - Code coverage
+- **Python 3** - For some analysis tools
 
 ## Contributing
 
