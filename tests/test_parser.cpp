@@ -556,3 +556,35 @@ TEST_F(ParserTest, PerformanceTest) {
   EXPECT_TRUE(parser.parse(ctx, begin, end));
   EXPECT_EQ(parser.size(), 10000);
 }
+
+TEST_F(ParserTest, EOFRule) {
+  using namespace stlx::parse;
+
+  // Test EOF with empty input
+  std::string empty;
+  auto begin1 = empty.begin();
+  auto end1 = empty.end();
+  context<std::string::iterator> ctx1(begin1, end1);
+  eof<std::string::iterator> eof_parser;
+  
+  EXPECT_TRUE(eof_parser.parse(ctx1, begin1, end1)) 
+      << "EOF should match empty input";
+
+  // Test EOF with non-empty input (should fail)
+  std::string non_empty = "hello";
+  auto begin2 = non_empty.begin();
+  auto end2 = non_empty.end();
+  context<std::string::iterator> ctx2(begin2, end2);
+  
+  EXPECT_FALSE(eof_parser.parse(ctx2, begin2, end2)) 
+      << "EOF should not match non-empty input";
+  
+  // Test EOF with iterator at end but non-empty string
+  std::string partial = "hello";
+  auto begin3 = partial.end();  // Start at end
+  auto end3 = partial.end();
+  context<std::string::iterator> ctx3(begin3, end3);
+  
+  EXPECT_TRUE(eof_parser.parse(ctx3, begin3, end3)) 
+      << "EOF should match when iterator is at end";
+}

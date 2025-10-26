@@ -40,7 +40,9 @@ using whitespace_char = character<std::string::const_iterator, ' '>;
 using whitespace = zero_or_more_<std::string::const_iterator, whitespace_char>;
 
 // Literals
-using number_literal = one_or_more_<std::string::const_iterator, digit>;
+struct number_literal : rule<std::string::const_iterator, number_literal,
+                            one_or_more_<std::string::const_iterator, digit>> {
+};
 using identifier_char = or_<std::string::const_iterator, letter_lower, letter_upper, digit>;
 using identifier_literal = and_<std::string::const_iterator, 
                                  letter, 
@@ -281,12 +283,13 @@ struct statement_sequence
                             end_statement>>> {
 };
 
-// Program (statement sequence with optional trailing whitespace)
+// Program (statement sequence with optional trailing whitespace followed by EOF)
 struct basic_program
     : rule<std::string::const_iterator, basic_program,
            and_<std::string::const_iterator,
                 statement_sequence,
-                whitespace>> {
+                whitespace,
+                eof<std::string::const_iterator>>> {
 };
 
 }  // namespace basic

@@ -725,9 +725,35 @@ public:
   using _name = stlx::parse::regex<std::string::const_iterator,                \
                                    sizeof(_::_name), _::_name>;
 
-// End of file marker
-struct EndOfFile {
-  using impl_type = EndOfFile;
+// End of stream/input rule - matches when iterator has reached the end
+template <typename Iterator>
+class eof : public rule<Iterator, eof<Iterator>> {
+public:
+  using iterator_type = Iterator;
+  using _super_t = rule<Iterator, eof<Iterator>>;
+
+  eof() = default;
+
+  bool parse(context<iterator_type> &ctx, iterator_type &begin,
+             iterator_type &end) override {
+    // For eof, we don't need to skip whitespace - we just check if we're at the end
+    if (begin == end) {
+      return true;
+    }
+    
+    ctx.parse_errors.emplace_back(
+        std::make_shared<parse_error<iterator_type>>(
+            this->type(), begin, "Expected end of input",
+            begin != end ? std::string(begin, begin + std::min<size_t>(10, end - begin)) +
+                "..."
+            : "EOF"));
+    return false;
+  }
+
+  std::string_view get_text() const override {
+    static const std::string empty;
+    return empty;
+  }
 };
 
 } // namespace parse
@@ -740,7 +766,8 @@ public:
   template <typename _iterator_t>
   static bool parse(_iterator_t begin, _iterator_t end,
                     std::shared_ptr<_rule_t> &ast,
-                    typename parse::parse_error<_iterator_t>::vector &errors) {
+                    typename parse::parse_error<_iterator_t>::vector &errors,
+                    bool require_full_consumption = false) {
     parse::context<_iterator_t> ctx(begin, end, true);
     auto start_rule = std::make_shared<_rule_t>();
 
@@ -749,7 +776,8 @@ public:
       return false;
     }
 
-    if (begin != end) {
+    // Optionally check if all input was consumed
+    if (require_full_consumption && begin != end) {
       errors.emplace_back(std::make_shared<parse::parse_error<_iterator_t>>(
           typeid(_rule_t), begin, "Expected end of input",
           std::string(begin, begin + std::min<size_t>(10, end - begin)) +
@@ -763,9 +791,10 @@ public:
 
   template <typename _iterator_t>
   static bool parse(_iterator_t begin, _iterator_t end,
-                    std::shared_ptr<_rule_t> &ast) {
+                    std::shared_ptr<_rule_t> &ast,
+                    bool require_full_consumption = false) {
     typename parse::parse_error<_iterator_t>::vector errors;
-    return parse(begin, end, ast, errors);
+    return parse(begin, end, ast, errors, require_full_consumption);
   }
 };
 
