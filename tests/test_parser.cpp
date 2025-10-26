@@ -190,6 +190,62 @@ TEST_F(ParserTest, ZeroOrMoreCombinator) {
   EXPECT_EQ(parser.size(), 3); // Should have 3 matches
 }
 
+// Test parser name() method returns readable names
+TEST_F(ParserTest, ParserNameMethod) {
+  using char_a = character<std::string::iterator, 'a'>;
+  using char_b = character<std::string::iterator, 'b'>;
+  
+  // Test simple character parser
+  char_a char_parser;
+  std::string char_name = char_parser.name();
+  EXPECT_FALSE(char_name.empty()) << "name() should return a non-empty string";
+  // name() should be readable (not mangled)
+  
+  // Test OR combinator with CRTP struct
+  struct test_or : rule<std::string::iterator, test_or,
+                        or_<std::string::iterator, char_a, char_b>> {};
+  
+  test_or or_parser;
+  std::string or_name = or_parser.name();
+  EXPECT_FALSE(or_name.empty()) << "name() should return a non-empty string";
+  // Note: name() returns the struct name in the local scope
+  
+  // Test AND combinator with CRTP struct
+  struct test_and : rule<std::string::iterator, test_and,
+                         and_<std::string::iterator, char_a, char_b>> {};
+  
+  test_and and_parser;
+  std::string and_name = and_parser.name();
+  EXPECT_FALSE(and_name.empty()) << "name() should return a non-empty string";
+  
+  // Verify name() returns something readable (not too long or mangled)
+  EXPECT_LT(or_name.length(), 200) << "name() should return reasonable length";
+  EXPECT_LT(and_name.length(), 200) << "name() should return reasonable length";
+  
+  // Both should end with the struct name
+  EXPECT_TRUE(or_name.find("test_or") != std::string::npos) 
+      << "name() should include struct name";
+  EXPECT_TRUE(and_name.find("test_and") != std::string::npos) 
+      << "name() should include struct name";
+}
+
+// Test parser type() method returns correct type
+TEST_F(ParserTest, ParserTypeMethod) {
+  // Test CRTP struct
+  struct test_rule : rule<std::string::iterator, test_rule,
+                          character<std::string::iterator, 'a'>> {};
+  
+  test_rule parser;
+  const std::type_info& type_info = parser.type();
+  
+  // Should match the test_rule type
+  EXPECT_EQ(type_info, typeid(parser)) << "type() should return correct type_info";
+  
+  // Verify isa() method
+  EXPECT_TRUE(parser.isa(typeid(parser))) << "isa() should identify self";
+  EXPECT_TRUE(parser.isa(typeid(test_rule))) << "isa() should identify rule type";
+}
+
 // Test ONE_OR_MORE combinator
 TEST_F(ParserTest, OneOrMoreCombinator) {
   using char_a = character<std::string::iterator, 'a'>;
