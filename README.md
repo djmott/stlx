@@ -30,7 +30,6 @@ ninja test
 #include <stlx/stlx.hpp>
 #include <stlx/parser.hpp>      // For parser combinators
 #include <stlx/xstring.hpp>    // For extended string utilities
-#include <stlx/grammars/abasic.hpp>  // For BASIC grammar
 
 using namespace stlx;
 
@@ -112,9 +111,7 @@ stlx/
 ├── include/stlx/               # Header-only library
 │   ├── stlx.hpp               # Main utilities header
 │   ├── parser.hpp             # Parser combinator library
-│   ├── xstring.hpp            # Extended string utilities
-│   └── grammars/
-│       └── abasic.hpp          # BASIC grammar parser
+│   └── xstring.hpp            # Extended string utilities
 ├── examples/                   # Sample applications
 │   ├── simple/
 │   │   └── hello_world.cpp
@@ -122,14 +119,14 @@ stlx/
 │   │   ├── main.cpp
 │   │   ├── module_a.cpp
 │   │   └── module_a.hpp
-│   └── parser_examples.cpp
+│   ├── parser_examples.cpp    # Parser combinator examples
+│   └── parse_tree_demo.cpp    # Parse tree visualization demo
 ├── tests/                      # Test suite
 │   ├── test_main.cpp          # Test entry point
 │   ├── test_stlx.cpp          # STLX utilities tests
 │   ├── test_parser.cpp        # Parser combinator tests
 │   ├── test_xstring.cpp       # String utilities tests
-│   ├── test_simple.cpp        # Simple utility tests
-│   └── test_abasic.cpp        # BASIC grammar tests
+│   └── test_simple.cpp        # Simple utility tests
 └── README.md
 ```
 
@@ -314,37 +311,6 @@ auto end = input.end();
 context<std::string::iterator> ctx(begin, end);
 
 bool success = number_parser.parse(ctx, begin, end);
-```
-
-## BASIC Grammar Parser
-
-STLX includes a complete BASIC-like grammar parser demonstrating complex parser construction:
-
-### Features
-- **Expressions**: Arithmetic operations with proper precedence
-- **Variables**: LET assignments and INPUT statements
-- **Control Flow**: IF/THEN/ELSE, FOR/WHILE loops
-- **I/O**: PRINT and INPUT statements
-- **Subroutines**: GOSUB/RETURN support
-- **CRTP-based**: Proper type information for debugging
-
-### Example Program
-```basic
-LET x = 10
-LET y = 20
-IF x > y THEN
-  LET result = x
-ELSE
-  LET result = y
-ENDIF
-PRINT result
-FOR i = 1 TO 5 STEP 1
-  LET sum = sum + i
-NEXT i
-WHILE x < 100
-  LET x = x * 2
-WEND
-END
 ```
 
 ## Example Usage
