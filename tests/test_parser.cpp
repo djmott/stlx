@@ -190,6 +190,66 @@ TEST_F(ParserTest, ZeroOrMoreCombinator) {
   EXPECT_EQ(parser.size(), 3); // Should have 3 matches
 }
 
+// Test ZERO_OR_MORE combinator with CRTP struct and type verification
+TEST_F(ParserTest, ZeroOrMoreCombinatorWithCRTP) {
+  using char_a = character<std::string::iterator, 'a'>;
+
+  // Create child rule for zero_or_more
+  auto char_a_rule = std::make_shared<char_a>();
+  
+  // Create parser directly with zero_or_more
+  zero_or_more_<std::string::iterator, char_a> parser(char_a_rule);
+
+  std::string input1 = "aaaa";
+  std::string input2 = "";
+  std::string input3 = "aaab";
+
+  auto begin1 = input1.begin();
+  auto end1 = input1.end();
+  context<std::string::iterator> ctx1(begin1, end1);
+
+  auto begin2 = input2.begin();
+  auto end2 = input2.end();
+  context<std::string::iterator> ctx2(begin2, end2);
+
+  auto begin3 = input3.begin();
+  auto end3 = input3.end();
+  context<std::string::iterator> ctx3(begin3, end3);
+
+  // Test parsing
+  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
+  EXPECT_EQ(parser.size(), 4); // Should have 4 matches
+  
+  auto begin2_reset = input2.begin();
+  auto end2_reset = input2.end();
+  context<std::string::iterator> ctx2_reset(begin2_reset, end2_reset);
+  EXPECT_TRUE(parser.parse(ctx2_reset, begin2_reset, end2_reset));
+  EXPECT_EQ(parser.size(), 0); // Should have 0 matches
+  
+  auto begin3_reset = input3.begin();
+  auto end3_reset = input3.end();
+  context<std::string::iterator> ctx3_reset(begin3_reset, end3_reset);
+  EXPECT_TRUE(parser.parse(ctx3_reset, begin3_reset, end3_reset));
+  EXPECT_EQ(parser.size(), 3); // Should have 3 matches
+
+  // Test type() method returns correct type (zero_or_more_)
+  const std::type_info& type_info = parser.type();
+  EXPECT_EQ(type_info, typeid(zero_or_more_<std::string::iterator, char_a>)) 
+      << "type() should return zero_or_more type";
+  
+  // Test isa() method
+  EXPECT_TRUE(parser.isa(typeid(zero_or_more_<std::string::iterator, char_a>))) 
+      << "isa() should identify zero_or_more";
+  EXPECT_TRUE(parser.isa(typeid(parser))) 
+      << "isa() should identify self";
+  
+  // Test name() method returns readable name
+  std::string parser_name = parser.name();
+  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  // Verify name() contains some identifier for the type
+  EXPECT_GT(parser_name.length(), 0) << "name() should return some identifier";
+}
+
 // Test parser name() method returns readable names
 TEST_F(ParserTest, ParserNameMethod) {
   using char_a = character<std::string::iterator, 'a'>;
