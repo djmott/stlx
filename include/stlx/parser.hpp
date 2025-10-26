@@ -370,25 +370,34 @@ public:
 // OR combinator with proper template handling
 template <typename Iterator, typename...> class or_;
 
-// Helper function to try parsing tail types for OR
+// Helper function to try all alternatives and track longest match for OR
 // Base case: no tail types left to try
 template <typename Iterator>
-bool try_parse_tail_or(context<Iterator> &ctx, Iterator &begin, Iterator &end,
-                       std::shared_ptr<rule_base<Iterator>> &tail_ast) {
-  return false; // No more alternatives to try
+void try_all_alternatives_or(context<Iterator> &ctx, Iterator backup, Iterator end,
+                              std::shared_ptr<rule_base<Iterator>> &best_ast,
+                              Iterator &best_end, size_t &best_consumed) {
+  // No more alternatives to try
 }
 
-// Recursive case: try first tail type, then remaining
+// Recursive case: try each tail type and update best match if longer
 template <typename Iterator, typename HeadTail, typename... RestTail>
-bool try_parse_tail_or(context<Iterator> &ctx, Iterator &begin, Iterator &end,
-                       std::shared_ptr<rule_base<Iterator>> &tail_ast) {
-  // Try to parse this tail type
-  if (HeadTail::parse(ctx, begin, end, tail_ast)) {
-    return true; // Success!
+void try_all_alternatives_or(context<Iterator> &ctx, Iterator backup, Iterator end,
+                              std::shared_ptr<rule_base<Iterator>> &best_ast,
+                              Iterator &best_end, size_t &best_consumed) {
+  // Try this alternative
+  auto try_begin = backup;
+  std::shared_ptr<rule_base<Iterator>> try_ast;
+  if (HeadTail::parse(ctx, try_begin, end, try_ast)) {
+    size_t consumed = std::distance(backup, try_begin);
+    if (consumed > best_consumed) {
+      best_consumed = consumed;
+      best_end = try_begin;
+      best_ast = try_ast;
+    }
   }
   
-  // This tail type failed - try remaining ones
-  return try_parse_tail_or<Iterator, RestTail...>(ctx, begin, end, tail_ast);
+  // Try remaining alternatives
+  try_all_alternatives_or<Iterator, RestTail...>(ctx, backup, end, best_ast, best_end, best_consumed);
 }
 
 template <typename Iterator>
@@ -416,38 +425,36 @@ public:
                     iterator_type &end,
                     std::shared_ptr<rule_base<Iterator>>& ast) {
     auto backup = begin;
-    typename parse_error<iterator_type>::vector branch_errors;
-
-    // Try to parse first child (_head_t)
-    std::shared_ptr<rule_base<Iterator>> head_ast;
-    auto head_backup = begin;
-    if (_head_t::parse(ctx, begin, end, head_ast)) {
-      // Success - return this child with matched text range
-      Iterator match_start = backup;
-      Iterator match_end = begin;
-      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>(match_start, match_end);
-      ast->push_back(head_ast);
+    
+    // Track best match across all alternatives
+    std::shared_ptr<rule_base<Iterator>> best_ast;
+    Iterator best_end = backup;
+    size_t best_consumed = 0;
+    
+    // Try first alternative (_head_t)
+    auto try_begin = backup;
+    std::shared_ptr<rule_base<Iterator>> try_ast;
+    if (_head_t::parse(ctx, try_begin, end, try_ast)) {
+      size_t consumed = std::distance(backup, try_begin);
+      if (consumed > best_consumed) {
+        best_consumed = consumed;
+        best_end = try_begin;
+        best_ast = try_ast;
+      }
+    }
+    
+    // Try remaining alternatives (_tail_ts)
+    try_all_alternatives_or<Iterator, _tail_ts...>(ctx, backup, end, best_ast, best_end, best_consumed);
+    
+    // Return longest match if any succeeded
+    if (best_consumed > 0) {
+      begin = best_end;
+      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>(backup, best_end);
+      ast->push_back(best_ast);
       return true;
     }
     
-    branch_errors.emplace_back(std::make_shared<parse_error<iterator_type>>(
-        typeid(_head_t), head_backup, "Alternative branch failed",
-        head_backup != end ? std::string(1, *head_backup) : "EOF"));
-    begin = backup;
-
-    // Try remaining children (_tail_ts) recursively
-    std::shared_ptr<rule_base<Iterator>> tail_ast;
-    if (try_parse_tail_or<Iterator, _tail_ts...>(ctx, begin, end, tail_ast)) {
-      Iterator match_start = backup;
-      Iterator match_end = begin;
-      ast = std::make_shared<or_<Iterator, _head_t, _tail_ts...>>(match_start, match_end);
-      ast->push_back(tail_ast);
-      return true;
-    }
-
     // All alternatives failed
-    ctx.parse_errors.insert(ctx.parse_errors.end(), branch_errors.begin(),
-                            branch_errors.end());
     return false;
   }
 };
@@ -655,6 +662,22 @@ public:
     
     // Parse succeeded - capture end of iterator range
     Iterator match_end = begin;
+    
+    // Word boundary check: ensure next character is not alphanumeric or underscore
+    // This prevents "END" from matching "ENDIF"
+    if (begin != end) {
+      char next_char = *begin;
+      if (std::isalnum(static_cast<unsigned char>(next_char)) || next_char == '_') {
+        // Next character is a word character - this is a prefix match, not a full word
+        ctx.parse_errors.emplace_back(
+            std::make_shared<parse_error<iterator_type>>(
+                typeid(string<Iterator, _len, _str>), backup,
+                std::string("String matched but next character is word character: ") + lit,
+                std::string(1, next_char)));
+        begin = backup;
+        return false;
+      }
+    }
     
     // Create instance NOW, after successful parse
     ast = std::make_shared<string<Iterator, _len, _str>>(match_start, match_end);

@@ -149,13 +149,13 @@ using ge_op = and_<std::string::const_iterator, gt, eq>;
 struct comparison_expression
     : rule<std::string::const_iterator, comparison_expression,
            or_<std::string::const_iterator,
-               expression,
                and_<std::string::const_iterator, expression, eq_op, expression>,
                and_<std::string::const_iterator, expression, ne_op, expression>,
+               and_<std::string::const_iterator, expression, le_op, expression>,
+               and_<std::string::const_iterator, expression, ge_op, expression>,
                and_<std::string::const_iterator, expression, lt, expression>,
                and_<std::string::const_iterator, expression, gt, expression>,
-               and_<std::string::const_iterator, expression, le_op, expression>,
-               and_<std::string::const_iterator, expression, ge_op, expression>>> {
+               expression>> {
 };
 
 // Statements
