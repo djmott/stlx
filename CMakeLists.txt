@@ -34,6 +34,11 @@ find_package(GCOVR)
 find_package(CPPLINT)
 find_package(IWYU)
 
+# Include sanitizer module and setup global sanitizers BEFORE FetchContent
+# This ensures all targets including dependencies like GTest get sanitizer flags
+include(Sanitizers)
+setup_global_sanitizers()
+
 # Configure FetchContent for GTest
 include(FetchContent)
 FetchContent_Declare(
@@ -52,7 +57,6 @@ target_include_directories(stlx INTERFACE
 
 # Apply sanitizers to library if requested
 if(NOT SANITIZER_TYPE STREQUAL "None")
-    include(Sanitizers)
     apply_sanitizers(stlx)
 endif()
 

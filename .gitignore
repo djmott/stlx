@@ -47,7 +47,7 @@ coverage_report.html
 *.tmp
 *.temp
 *.log
-
+.vs
 
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc
