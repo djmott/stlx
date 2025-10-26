@@ -33,6 +33,66 @@ namespace parse {
 // Forward declarations
 template <typename Iterator> class rule_base;
 
+// Helper function to demangle and prettify type names
+inline std::string demangle_type_name(const char* mangled_name) {
+    std::string name(mangled_name);
+    
+    // Handle GCC/Clang mangled names (N...E format for nested types)
+    if (!name.empty() && name[0] == 'N' && name.back() == 'E') {
+        name = name.substr(1);  // Remove leading N
+        name.pop_back();        // Remove trailing E
+        
+        // Now parse the structure: <len><name><len><name>...
+        // Numbers indicate the length of the following name
+        std::string result;
+        std::string::size_type i = 0;
+        
+        while (i < name.size()) {
+            // Extract number (length)
+            std::string num_str;
+            while (i < name.size() && std::isdigit(name[i])) {
+                num_str += name[i];
+                ++i;
+            }
+            
+            if (!num_str.empty() && !result.empty()) {
+                // Insert :: before this component
+                result += "::";
+            }
+            
+            // Extract name of given length
+            if (!num_str.empty()) {
+                int len = std::stoi(num_str);
+                if (i + len <= name.size()) {
+                    result += name.substr(i, len);
+                    i += len;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        
+        return result.empty() ? name : result;
+    }
+    
+    // For simple names, just clean them up
+    // Remove template parameters
+    size_t pos = name.find('<');
+    if (pos != std::string::npos) {
+        name = name.substr(0, pos);
+    }
+    
+    // Remove namespace markers at the end
+    pos = name.find_last_of(':');
+    if (pos != std::string::npos && pos < name.size() - 1 && name[pos + 1] == ':') {
+        name = name.substr(pos + 2);
+    }
+    
+    return name;
+}
+
 // Skip whitespace helper function
 template <typename Iterator>
 void skip_ws(Iterator &begin, Iterator &end, bool ignore_whitespace) {
@@ -93,6 +153,7 @@ public:
 
   [[nodiscard]] virtual bool isa(const std::type_info &oType) const = 0;
   [[nodiscard]] virtual const std::type_info &type() const = 0;
+  [[nodiscard]] virtual std::string name() const = 0;
 
   pointer_type parent() { return _parent.lock(); }
 
@@ -152,6 +213,8 @@ public:
   }
 
   const std::type_info &type() const override { return typeid(_decl_t); }
+
+  std::string name() const override { return demangle_type_name(typeid(_decl_t).name()); }
 
   bool parse(context<iterator_type> &ctx, iterator_type &begin,
              iterator_type &end) override {

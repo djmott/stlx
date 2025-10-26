@@ -29,12 +29,21 @@ STRING(five, "5");
 STRING(dash_color, "--color=");
 STRING(dash_prime, "--prime=");
 
-// Rules
-using rgb = or_<std::string::const_iterator, red, green, blue>;
-using prime_num = or_<std::string::const_iterator, one, three, five>;
-using color_param = and_<std::string::const_iterator, dash_color, rgb>;
-using prime_param = and_<std::string::const_iterator, dash_prime, prime_num>;
-using parameter = or_<std::string::const_iterator, color_param, prime_param>;
+// Rules - using CRTP-based struct pattern
+struct rgb : rule<std::string::const_iterator, rgb,
+                  or_<std::string::const_iterator, red, green, blue>> {};
+
+struct prime_num : rule<std::string::const_iterator, prime_num,
+                        or_<std::string::const_iterator, one, three, five>> {};
+
+struct color_param : rule<std::string::const_iterator, color_param,
+                          and_<std::string::const_iterator, dash_color, rgb>> {};
+
+struct prime_param : rule<std::string::const_iterator, prime_param,
+                          and_<std::string::const_iterator, dash_prime, prime_num>> {};
+
+struct parameter : rule<std::string::const_iterator, parameter,
+                        or_<std::string::const_iterator, color_param, prime_param>> {};
 } // namespace command_line
 
 class Parser1Test : public ::testing::Test {
@@ -144,6 +153,7 @@ TEST_F(Parser1Test, PartialMatchesFail) {
     using parser_t = stlx::parser<command_line::parameter>;
 
     bool success = parser_t::parse(input.cbegin(), input.cend(), ast);
+    ast->
     EXPECT_FALSE(success) << "Should have failed to parse: " << input;
   }
 }
