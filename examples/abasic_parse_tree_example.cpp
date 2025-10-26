@@ -179,8 +179,11 @@ int main() {
             // Create AST using the parser
             std::shared_ptr<basic_parser> ast;
             if (stlx::parser<basic_parser>::parse(program.cbegin(), program.cend(), ast)) {
+                std::cout << "✓ AST generated successfully!\n\n";
                 // Generate and display AST using parse_tree_printer
                 print_parse_tree<basic_parser, std::string::const_iterator>(std::static_pointer_cast<rule_base<std::string::const_iterator>>(ast));
+            } else {
+                std::cout << "✗ AST generation failed.\n";
             }
         } else {
             std::cout << "✗ Parse failed.\n";
