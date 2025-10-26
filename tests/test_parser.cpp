@@ -287,6 +287,25 @@ TEST_F(ParserTest, ParserNameMethod) {
       << "name() should include struct name";
   EXPECT_TRUE(and_name.find("test_and") != std::string::npos) 
       << "name() should include struct name";
+  
+  // Test type() method returns correct types
+  const std::type_info& or_type = or_parser.type();
+  EXPECT_EQ(or_type, typeid(test_or)) 
+      << "type() should return test_or type";
+  
+  const std::type_info& and_type = and_parser.type();
+  EXPECT_EQ(and_type, typeid(test_and)) 
+      << "type() should return test_and type";
+  
+  // Test isa() method
+  EXPECT_TRUE(or_parser.isa(typeid(test_or))) 
+      << "isa() should identify test_or";
+  EXPECT_TRUE(or_parser.isa(typeid(or_parser))) 
+      << "isa() should identify or_parser";
+  EXPECT_TRUE(and_parser.isa(typeid(test_and))) 
+      << "isa() should identify test_and";
+  EXPECT_TRUE(and_parser.isa(typeid(and_parser))) 
+      << "isa() should identify and_parser";
 }
 
 // Test parser type() method returns correct type
