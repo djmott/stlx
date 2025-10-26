@@ -295,8 +295,7 @@ struct statement_sequence
                             while_statement,
                             goto_statement,
                             gosub_statement,
-                            return_statement,
-                            end_statement>>> {
+                            return_statement>>> {
 };
 
 // Program (statement sequence followed by EOF)
