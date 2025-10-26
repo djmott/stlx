@@ -90,7 +90,7 @@ struct primary_expression;
 // Expression precedence: Additive -> Multiplicative -> Unary -> Primary
 
 struct primary_expression
-    : rule<std::string::iterator, 
+    : rule<std::string::iterator, primary_expression,
            or_<std::string::iterator,
                number_literal,
                identifier_literal,
@@ -99,14 +99,14 @@ struct primary_expression
 };
 
 struct unary_expression
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, unary_expression,
            or_<std::string::iterator,
                primary_expression,
                and_<std::string::iterator, minus, primary_expression>>> {
 };
 
 struct multiplicative_expression
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, multiplicative_expression,
            or_<std::string::iterator,
                unary_expression,
                and_<std::string::iterator, multiplicative_expression, mult, unary_expression>,
@@ -114,7 +114,7 @@ struct multiplicative_expression
 };
 
 struct additive_expression
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, additive_expression,
            or_<std::string::iterator,
                multiplicative_expression,
                and_<std::string::iterator, additive_expression, plus, multiplicative_expression>,
@@ -122,7 +122,7 @@ struct additive_expression
 };
 
 struct expression
-    : rule<std::string::iterator, additive_expression> {
+    : rule<std::string::iterator, expression, additive_expression> {
 };
 
 // Comparison operators
@@ -132,7 +132,7 @@ using le_op = and_<std::string::iterator, lt, eq>;
 using ge_op = and_<std::string::iterator, gt, eq>;
 
 struct comparison_expression
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, comparison_expression,
            or_<std::string::iterator,
                expression,
                and_<std::string::iterator, expression, eq_op, expression>,
@@ -160,7 +160,7 @@ struct statement_sequence;
 
 // Assignment: LET identifier = expression
 struct assignment_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, assignment_statement,
            and_<std::string::iterator,
                 whitespace,
                 _let, whitespace,
@@ -171,7 +171,7 @@ struct assignment_statement
 
 // PRINT expression
 struct print_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, print_statement,
            and_<std::string::iterator,
                 whitespace,
                 _print, whitespace,
@@ -180,7 +180,7 @@ struct print_statement
 
 // INPUT identifier
 struct input_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, input_statement,
            and_<std::string::iterator,
                 whitespace,
                 _input, whitespace,
@@ -189,7 +189,7 @@ struct input_statement
 
 // IF comparison THEN ... ELSE ... ENDIF
 struct if_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, if_statement,
            and_<std::string::iterator,
                 whitespace,
                 _if, whitespace,
@@ -203,7 +203,7 @@ struct if_statement
 
 // FOR identifier = expression TO expression STEP expression ... NEXT
 struct for_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, for_statement,
            and_<std::string::iterator,
                 whitespace,
                 _for, whitespace,
@@ -221,7 +221,7 @@ struct for_statement
 
 // WHILE comparison ... WEND
 struct while_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, while_statement,
            and_<std::string::iterator,
                 whitespace,
                 _while, whitespace,
@@ -232,7 +232,7 @@ struct while_statement
 
 // GOTO identifier
 struct goto_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, goto_statement,
            and_<std::string::iterator,
                 whitespace,
                 _goto, whitespace,
@@ -241,7 +241,7 @@ struct goto_statement
 
 // GOSUB identifier
 struct gosub_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, gosub_statement,
            and_<std::string::iterator,
                 whitespace,
                 _gosub, whitespace,
@@ -250,7 +250,7 @@ struct gosub_statement
 
 // RETURN
 struct return_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, return_statement,
            and_<std::string::iterator,
                 whitespace,
                 _return>> {
@@ -258,7 +258,7 @@ struct return_statement
 
 // END
 struct end_statement
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, end_statement,
            and_<std::string::iterator,
                 whitespace,
                 _end>> {
@@ -266,7 +266,7 @@ struct end_statement
 
 // Statement sequence (one or more statements)
 struct statement_sequence
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, statement_sequence,
            one_or_more_<std::string::iterator,
                         or_<std::string::iterator,
                             assignment_statement,
@@ -283,7 +283,7 @@ struct statement_sequence
 
 // Program (statement sequence with optional trailing whitespace)
 struct basic_program
-    : rule<std::string::iterator,
+    : rule<std::string::iterator, basic_program,
            and_<std::string::iterator,
                 statement_sequence,
                 whitespace>> {
