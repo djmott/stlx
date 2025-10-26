@@ -32,6 +32,15 @@ if(NOT SANITIZER_TYPE STREQUAL "None")
     apply_sanitizers(parser_examples)
 endif()
 
+# Command line parser example (temporarily disabled - iterator type issues)
+# add_executable(parser1 complex/parser1.cpp)
+# target_link_libraries(parser1 stlx)
+
+# Apply sanitizers if requested
+# if(NOT SANITIZER_TYPE STREQUAL "None")
+#     apply_sanitizers(parser1)
+# endif()
+
 # Set output directories
 set_target_properties(hello_world complex_example parser_examples PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
