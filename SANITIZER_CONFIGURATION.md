@@ -74,7 +74,10 @@ To test all sanitizer types:
 
 ```bash
 for sanitizer in None Address UndefinedBehavior Thread Leak Memory; do
-    cmake -DSANITIZER_TYPE=$sanitizer -S . -B build/test-$sanitizer
+    cmake -DSANITIZER_TYPE=$sanitizer -S . -B .build/test-$sanitizer
+    cmake --build .build/test-$sanitizer --target all
+    cmake --build .build/test-$sanitizer --target test
+    ctest --test-dir .build/test-$sanitizer
 done
 ```
 
