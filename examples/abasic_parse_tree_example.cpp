@@ -176,22 +176,8 @@ int main() {
             std::cout << "Matched program length: "
                       << std::distance(program.cbegin(), begin) << " characters\n";
 
-            // Generate and display AST
-            std::cout << "\n=== Parse Tree AST ===\n\n";
-
-            parse_tree_printer<basic_parser, std::string::const_iterator> printer;
-            auto ast = printer.parse_to_ast(program);
-
-            if (ast) {
-                // Print formatted tree
-                printer.print_ast(ast);
-
-                // Print statistics
-                std::cout << "\n";
-                printer.print_statistics(ast);
-            } else {
-                std::cout << "Could not generate AST.\n";
-            }
+            // Generate and display AST using parse_tree_printer
+            print_parse_tree<basic_parser, std::string::const_iterator>(program);
         } else {
             std::cout << "✗ Parse failed.\n";
         }
