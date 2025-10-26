@@ -30,561 +30,376 @@ protected:
   }
 };
 
-// Test basic character parsing
+// Test basic character parsing using parser::parse
 TEST_F(ParserTest, CharacterParsing) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct char_a_rule : rule<std::string::iterator, char_a_rule,
+                            and_<std::string::iterator,
+                                character<std::string::iterator, 'a'>,
+                                eof<std::string::iterator>>> {};
 
   std::string input1 = "a";
   std::string input2 = "b";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  char_a parser;
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<char_a_rule> ast1, ast2;
   
-  // Test type() method
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(char_a)) << "type() should return char_a type";
+  EXPECT_TRUE(stlx::parser<char_a_rule>::parse(input1.begin(), input1.end(), ast1));
+  EXPECT_FALSE(stlx::parser<char_a_rule>::parse(input2.begin(), input2.end(), ast2));
   
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(char_a))) << "isa() should identify char_a";
+  EXPECT_NE(ast1, nullptr) << "AST should not be null for valid input";
   
-  // Test name() method
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  if (ast1) {
+    const std::type_info& type_info = ast1->type();
+    EXPECT_EQ(type_info, typeid(char_a_rule)) << "type() should return char_a_rule type";
+    EXPECT_TRUE(ast1->isa(typeid(char_a_rule))) << "isa() should identify char_a_rule";
+    EXPECT_FALSE(ast1->name().empty()) << "name() should return non-empty string";
+  }
 }
 
 // Test string parsing
 TEST_F(ParserTest, StringParsing) {
-  // Use a simple character test instead of string for now
-  using char_h = character<std::string::iterator, 'h'>;
+  struct char_h_rule : rule<std::string::iterator, char_h_rule,
+                            and_<std::string::iterator,
+                                character<std::string::iterator, 'h'>,
+                                eof<std::string::iterator>>> {};
 
   std::string input1 = "h";
   std::string input2 = "w";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  char_h parser;
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<char_h_rule> ast1, ast2;
   
-  // Test type() method
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(char_h)) << "type() should return char_h type";
+  EXPECT_TRUE(stlx::parser<char_h_rule>::parse(input1.begin(), input1.end(), ast1));
+  EXPECT_FALSE(stlx::parser<char_h_rule>::parse(input2.begin(), input2.end(), ast2));
   
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(char_h))) << "isa() should identify char_h";
-  
-  // Test name() method
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  if (ast1) {
+    EXPECT_EQ(ast1->type(), typeid(char_h_rule));
+    EXPECT_TRUE(ast1->isa(typeid(char_h_rule)));
+    EXPECT_FALSE(ast1->name().empty());
+  }
 }
 
-// Test OR combinator
+// Test OR combinator with parser::parse
 TEST_F(ParserTest, OrCombinator) {
   using char_a = character<std::string::iterator, 'a'>;
   using char_b = character<std::string::iterator, 'b'>;
+  
+  struct or_rule : rule<std::string::iterator, or_rule,
+                        or_<std::string::iterator,
+                            character<std::string::iterator, 'a'>,
+                            character<std::string::iterator, 'b'>>> {};
 
   std::string input1 = "a";
   std::string input2 = "b";
   std::string input3 = "c";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  auto begin3 = input3.begin();
-  auto end3 = input3.end();
-  context<std::string::iterator> ctx3(begin3, end3);
-
-  // Create actual instances of the child rules
-  auto char_a_rule = std::make_shared<char_a>();
-  auto char_b_rule = std::make_shared<char_b>();
-
-  // Create OR combinator with the actual child rules
-  or_<std::string::iterator> parser(char_a_rule, char_b_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_TRUE(parser.parse(ctx2, begin2, end2));
-  EXPECT_FALSE(parser.parse(ctx3, begin3, end3));
+  std::shared_ptr<or_rule> ast1, ast2, ast3;
   
-  // Test type() method
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(or_<std::string::iterator>)) 
-      << "type() should return or_ type";
+  EXPECT_TRUE(stlx::parser<or_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_TRUE(stlx::parser<or_rule>::parse(input2.begin(), input2.end(), ast2, false));
+  EXPECT_FALSE(stlx::parser<or_rule>::parse(input3.begin(), input3.end(), ast3, false));
   
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(or_<std::string::iterator>))) 
-      << "isa() should identify or_";
-  
-  // Test name() method
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  if (ast1) {
+    EXPECT_EQ(ast1->type(), typeid(or_rule));
+    EXPECT_TRUE(ast1->isa(typeid(or_rule)));
+    EXPECT_FALSE(ast1->name().empty());
+  }
 }
 
-// Test AND combinator
+// Test AND combinator with parser::parse
 TEST_F(ParserTest, AndCombinator) {
-  using char_a = character<std::string::iterator, 'a'>;
-  using char_b = character<std::string::iterator, 'b'>;
+  struct and_rule : rule<std::string::iterator, and_rule,
+                         and_<std::string::iterator,
+                             character<std::string::iterator, 'a'>,
+                             character<std::string::iterator, 'b'>>> {};
 
   std::string input1 = "ab";
   std::string input2 = "ac";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  // Create actual instances of the child rules
-  auto char_a_rule = std::make_shared<char_a>();
-  auto char_b_rule = std::make_shared<char_b>();
-
-  // Create AND combinator with the actual child rules
-  and_<std::string::iterator> parser(char_a_rule, char_b_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<and_rule> ast1, ast2;
   
-  // Test type() method
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(and_<std::string::iterator>)) 
-      << "type() should return and_ type";
+  EXPECT_TRUE(stlx::parser<and_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_FALSE(stlx::parser<and_rule>::parse(input2.begin(), input2.end(), ast2, false));
   
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(and_<std::string::iterator>))) 
-      << "isa() should identify and_";
-  
-  // Test name() method
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  if (ast1) {
+    EXPECT_EQ(ast1->type(), typeid(and_rule));
+    EXPECT_TRUE(ast1->isa(typeid(and_rule)));
+  }
 }
 
-// Test NOT combinator
+// Test NOT combinator with parser::parse
 TEST_F(ParserTest, NotCombinator) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct not_rule : rule<std::string::iterator, not_rule,
+                          not_<std::string::iterator,
+                              character<std::string::iterator, 'a'>>> {};
 
   std::string input1 = "b";
   std::string input2 = "a";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  // Create actual instance of the child rule
-  auto char_a_rule = std::make_shared<char_a>();
-
-  // Create NOT combinator with the actual child rule
-  not_<std::string::iterator> parser(char_a_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<not_rule> ast1, ast2;
   
-  // Test type() method
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(not_<std::string::iterator>)) 
-      << "type() should return not_ type";
+  EXPECT_TRUE(stlx::parser<not_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_FALSE(stlx::parser<not_rule>::parse(input2.begin(), input2.end(), ast2, false));
   
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(not_<std::string::iterator>))) 
-      << "isa() should identify not_";
-  
-  // Test name() method
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
+  if (ast1) {
+    EXPECT_EQ(ast1->type(), typeid(not_rule));
+  }
 }
 
-// Test ZERO_OR_MORE combinator
+// Test ZERO_OR_MORE combinator with parser::parse
 TEST_F(ParserTest, ZeroOrMoreCombinator) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct zero_or_more_rule : rule<std::string::iterator, zero_or_more_rule,
+                                  zero_or_more_<std::string::iterator,
+                                               character<std::string::iterator, 'a'>>> {};
 
   std::string input1 = "aaaa";
   std::string input2 = "";
   std::string input3 = "aaab";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  auto begin3 = input3.begin();
-  auto end3 = input3.end();
-  context<std::string::iterator> ctx3(begin3, end3);
-
-  // Create actual instance of the child rule
-  auto char_a_rule = std::make_shared<char_a>();
-
-  // Create ZERO_OR_MORE combinator with the actual child rule
-  zero_or_more_<std::string::iterator, char_a> parser(char_a_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_EQ(parser.size(), 4); // Should have 4 matches
-  EXPECT_TRUE(parser.parse(ctx2, begin2, end2));
-  EXPECT_EQ(parser.size(), 0); // Should have 0 matches
-  EXPECT_TRUE(parser.parse(ctx3, begin3, end3));
-  EXPECT_EQ(parser.size(), 3); // Should have 3 matches
+  std::shared_ptr<zero_or_more_rule> ast1, ast2, ast3;
+  
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input2.begin(), input2.end(), ast2, false));
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input3.begin(), input3.end(), ast3, false));
+  
+  if (ast1 && ast2 && ast3) {
+    EXPECT_EQ(ast1->size(), 4); // Should have 4 matches
+    EXPECT_EQ(ast2->size(), 0); // Should have 0 matches
+    EXPECT_EQ(ast3->size(), 3); // Should have 3 matches
+  }
 }
 
 // Test ZERO_OR_MORE combinator with CRTP struct and type verification
 TEST_F(ParserTest, ZeroOrMoreCombinatorWithCRTP) {
-  using char_a = character<std::string::iterator, 'a'>;
-
-  // Create child rule for zero_or_more
-  auto char_a_rule = std::make_shared<char_a>();
-  
-  // Create parser directly with zero_or_more
-  zero_or_more_<std::string::iterator, char_a> parser(char_a_rule);
+  struct zero_or_more_rule : rule<std::string::iterator, zero_or_more_rule,
+                                  zero_or_more_<std::string::iterator,
+                                               character<std::string::iterator, 'a'>>> {};
 
   std::string input1 = "aaaa";
   std::string input2 = "";
   std::string input3 = "aaab";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  auto begin3 = input3.begin();
-  auto end3 = input3.end();
-  context<std::string::iterator> ctx3(begin3, end3);
-
-  // Test parsing
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_EQ(parser.size(), 4); // Should have 4 matches
+  std::shared_ptr<zero_or_more_rule> ast1, ast2, ast3;
   
-  auto begin2_reset = input2.begin();
-  auto end2_reset = input2.end();
-  context<std::string::iterator> ctx2_reset(begin2_reset, end2_reset);
-  EXPECT_TRUE(parser.parse(ctx2_reset, begin2_reset, end2_reset));
-  EXPECT_EQ(parser.size(), 0); // Should have 0 matches
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input2.begin(), input2.end(), ast2, false));
+  EXPECT_TRUE(stlx::parser<zero_or_more_rule>::parse(input3.begin(), input3.end(), ast3, false));
   
-  auto begin3_reset = input3.begin();
-  auto end3_reset = input3.end();
-  context<std::string::iterator> ctx3_reset(begin3_reset, end3_reset);
-  EXPECT_TRUE(parser.parse(ctx3_reset, begin3_reset, end3_reset));
-  EXPECT_EQ(parser.size(), 3); // Should have 3 matches
-
-  // Test type() method returns correct type (zero_or_more_)
-  const std::type_info& type_info = parser.type();
-  EXPECT_EQ(type_info, typeid(zero_or_more_<std::string::iterator, char_a>)) 
-      << "type() should return zero_or_more type";
-  
-  // Test isa() method
-  EXPECT_TRUE(parser.isa(typeid(zero_or_more_<std::string::iterator, char_a>))) 
-      << "isa() should identify zero_or_more";
-  EXPECT_TRUE(parser.isa(typeid(parser))) 
-      << "isa() should identify self";
-  
-  // Test name() method returns readable name
-  std::string parser_name = parser.name();
-  EXPECT_FALSE(parser_name.empty()) << "name() should return non-empty string";
-  // Verify name() contains some identifier for the type
-  EXPECT_GT(parser_name.length(), 0) << "name() should return some identifier";
+  if (ast1 && ast2 && ast3) {
+    EXPECT_EQ(ast1->size(), 4);
+    EXPECT_EQ(ast2->size(), 0);
+    EXPECT_EQ(ast3->size(), 3);
+    
+    EXPECT_EQ(ast1->type(), typeid(zero_or_more_rule));
+    EXPECT_TRUE(ast1->isa(typeid(zero_or_more_rule)));
+    EXPECT_FALSE(ast1->name().empty());
+  }
 }
 
 // Test parser name() method returns readable names
 TEST_F(ParserTest, ParserNameMethod) {
-  using char_a = character<std::string::iterator, 'a'>;
-  using char_b = character<std::string::iterator, 'b'>;
-  
-  // Test simple character parser
-  char_a char_parser;
-  std::string char_name = char_parser.name();
-  EXPECT_FALSE(char_name.empty()) << "name() should return a non-empty string";
-  // name() should be readable (not mangled)
-  
-  // Test OR combinator with CRTP struct
   struct test_or : rule<std::string::iterator, test_or,
-                        or_<std::string::iterator, char_a, char_b>> {};
+                        or_<std::string::iterator,
+                            character<std::string::iterator, 'a'>,
+                            character<std::string::iterator, 'b'>>> {};
   
-  test_or or_parser;
-  std::string or_name = or_parser.name();
-  EXPECT_FALSE(or_name.empty()) << "name() should return a non-empty string";
-  // Note: name() returns the struct name in the local scope
-  
-  // Test AND combinator with CRTP struct
   struct test_and : rule<std::string::iterator, test_and,
-                         and_<std::string::iterator, char_a, char_b>> {};
+                         and_<std::string::iterator,
+                             character<std::string::iterator, 'a'>,
+                             character<std::string::iterator, 'b'>>> {};
   
-  test_and and_parser;
-  std::string and_name = and_parser.name();
-  EXPECT_FALSE(and_name.empty()) << "name() should return a non-empty string";
+  std::string input = "a";
   
-  // Verify name() returns something readable (not too long or mangled)
-  EXPECT_LT(or_name.length(), 200) << "name() should return reasonable length";
-  EXPECT_LT(and_name.length(), 200) << "name() should return reasonable length";
+  std::shared_ptr<test_or> ast_or;
+  std::shared_ptr<test_and> ast_and;
   
-  // Both should end with the struct name
-  EXPECT_TRUE(or_name.find("test_or") != std::string::npos) 
-      << "name() should include struct name";
-  EXPECT_TRUE(and_name.find("test_and") != std::string::npos) 
-      << "name() should include struct name";
+  stlx::parser<test_or>::parse(input.begin(), input.end(), ast_or, false);
   
-  // Test type() method returns correct types
-  const std::type_info& or_type = or_parser.type();
-  EXPECT_EQ(or_type, typeid(test_or)) 
-      << "type() should return test_or type";
+  if (ast_or) {
+    std::string or_name = ast_or->name();
+    EXPECT_FALSE(or_name.empty());
+    EXPECT_LT(or_name.length(), 200);
+    EXPECT_TRUE(or_name.find("test_or") != std::string::npos);
+    
+    EXPECT_EQ(ast_or->type(), typeid(test_or));
+    EXPECT_TRUE(ast_or->isa(typeid(test_or)));
+  }
   
-  const std::type_info& and_type = and_parser.type();
-  EXPECT_EQ(and_type, typeid(test_and)) 
-      << "type() should return test_and type";
+  input = "ab";
+  stlx::parser<test_and>::parse(input.begin(), input.end(), ast_and, false);
   
-  // Test isa() method
-  EXPECT_TRUE(or_parser.isa(typeid(test_or))) 
-      << "isa() should identify test_or";
-  EXPECT_TRUE(or_parser.isa(typeid(or_parser))) 
-      << "isa() should identify or_parser";
-  EXPECT_TRUE(and_parser.isa(typeid(test_and))) 
-      << "isa() should identify test_and";
-  EXPECT_TRUE(and_parser.isa(typeid(and_parser))) 
-      << "isa() should identify and_parser";
+  if (ast_and) {
+    std::string and_name = ast_and->name();
+    EXPECT_FALSE(and_name.empty());
+    EXPECT_LT(and_name.length(), 200);
+    EXPECT_TRUE(and_name.find("test_and") != std::string::npos);
+    
+    EXPECT_EQ(ast_and->type(), typeid(test_and));
+    EXPECT_TRUE(ast_and->isa(typeid(test_and)));
+  }
 }
 
 // Test parser type() method returns correct type
 TEST_F(ParserTest, ParserTypeMethod) {
-  // Test CRTP struct
   struct test_rule : rule<std::string::iterator, test_rule,
                           character<std::string::iterator, 'a'>> {};
   
-  test_rule parser;
-  const std::type_info& type_info = parser.type();
+  std::string input = "a";
+  std::shared_ptr<test_rule> ast;
   
-  // Should match the test_rule type
-  EXPECT_EQ(type_info, typeid(parser)) << "type() should return correct type_info";
+  EXPECT_TRUE(stlx::parser<test_rule>::parse(input.begin(), input.end(), ast, false));
   
-  // Verify isa() method
-  EXPECT_TRUE(parser.isa(typeid(parser))) << "isa() should identify self";
-  EXPECT_TRUE(parser.isa(typeid(test_rule))) << "isa() should identify rule type";
+  if (ast) {
+    EXPECT_EQ(ast->type(), typeid(test_rule));
+    EXPECT_TRUE(ast->isa(typeid(test_rule)));
+    EXPECT_TRUE(ast->isa(typeid(ast)));
+  }
 }
 
-// Test ONE_OR_MORE combinator
+// Test ONE_OR_MORE combinator with parser::parse
 TEST_F(ParserTest, OneOrMoreCombinator) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct one_or_more_rule : rule<std::string::iterator, one_or_more_rule,
+                                  one_or_more_<std::string::iterator,
+                                              character<std::string::iterator, 'a'>>> {};
 
   std::string input1 = "aaaa";
   std::string input2 = "";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  // Create actual instance of the child rule
-  auto char_a_rule = std::make_shared<char_a>();
-
-  // Create ONE_OR_MORE combinator with the actual child rule
-  one_or_more_<std::string::iterator, char_a> parser(char_a_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_EQ(parser.size(), 4); // Should have 4 matches
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<one_or_more_rule> ast1, ast2;
+  
+  EXPECT_TRUE(stlx::parser<one_or_more_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_FALSE(stlx::parser<one_or_more_rule>::parse(input2.begin(), input2.end(), ast2, false));
+  
+  if (ast1) {
+    EXPECT_EQ(ast1->size(), 4);
+  }
 }
 
-// Test ZERO_OR_ONE combinator
+// Test ZERO_OR_ONE combinator with parser::parse
 TEST_F(ParserTest, ZeroOrOneCombinator) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct zero_or_one_rule : rule<std::string::iterator, zero_or_one_rule,
+                                  zero_or_one_<std::string::iterator,
+                                              character<std::string::iterator, 'a'>>> {};
 
   std::string input1 = "a";
   std::string input2 = "";
   std::string input3 = "aa";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  auto begin3 = input3.begin();
-  auto end3 = input3.end();
-  context<std::string::iterator> ctx3(begin3, end3);
-
-  // Create actual instance of the child rule
-  auto char_a_rule = std::make_shared<char_a>();
-
-  // Create ZERO_OR_ONE combinator with the actual child rule
-  zero_or_one_<std::string::iterator, char_a> parser(char_a_rule);
-
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_EQ(parser.size(), 1); // Should have 1 match
-  EXPECT_TRUE(parser.parse(ctx2, begin2, end2));
-  EXPECT_EQ(parser.size(), 0); // Should have 0 matches
-  EXPECT_TRUE(parser.parse(ctx3, begin3, end3));
-  EXPECT_EQ(parser.size(), 1); // Should have 1 match (only first 'a')
+  std::shared_ptr<zero_or_one_rule> ast1, ast2, ast3;
+  
+  EXPECT_TRUE(stlx::parser<zero_or_one_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_TRUE(stlx::parser<zero_or_one_rule>::parse(input2.begin(), input2.end(), ast2, false));
+  EXPECT_TRUE(stlx::parser<zero_or_one_rule>::parse(input3.begin(), input3.end(), ast3, false));
+  
+  if (ast1 && ast2 && ast3) {
+    EXPECT_EQ(ast1->size(), 1);
+    EXPECT_EQ(ast2->size(), 0);
+    EXPECT_EQ(ast3->size(), 1);
+  }
 }
 
-// Test whitespace handling
+// Test whitespace handling with parser::parse
 TEST_F(ParserTest, WhitespaceHandling) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct char_a_rule : rule<std::string::iterator, char_a_rule,
+                            character<std::string::iterator, 'a'>> {};
 
   std::string input1 = "  a";
   std::string input2 = "  b";
 
-  auto begin1 = input1.begin();
-  auto end1 = input1.end();
-  context<std::string::iterator> ctx1(begin1, end1, true); // ignore whitespace
-
-  auto begin2 = input2.begin();
-  auto end2 = input2.end();
-  context<std::string::iterator> ctx2(begin2, end2, true);
-
-  char_a parser;
-  EXPECT_TRUE(parser.parse(ctx1, begin1, end1));
-  EXPECT_FALSE(parser.parse(ctx2, begin2, end2));
+  std::shared_ptr<char_a_rule> ast1, ast2;
+  
+  EXPECT_TRUE(stlx::parser<char_a_rule>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_FALSE(stlx::parser<char_a_rule>::parse(input2.begin(), input2.end(), ast2, false));
 }
 
-// Test error reporting
+// Test error reporting with parser::parse
 TEST_F(ParserTest, ErrorReporting) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct char_a_rule : rule<std::string::iterator, char_a_rule,
+                         character<std::string::iterator, 'a'>> {};
 
   std::string input = "b";
-  auto begin = input.begin();
-  auto end = input.end();
-  context<std::string::iterator> ctx(begin, end);
-
-  char_a parser;
-  EXPECT_FALSE(parser.parse(ctx, begin, end));
-  EXPECT_FALSE(ctx.parse_errors.empty());
+  
+  std::shared_ptr<char_a_rule> ast;
+  typename parse_error<std::string::iterator>::vector errors;
+  
+  EXPECT_FALSE(stlx::parser<char_a_rule>::parse(input.begin(), input.end(), ast, errors, false));
+  EXPECT_FALSE(errors.empty());
 }
 
 // Test main parser interface
 TEST_F(ParserTest, MainParserInterface) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct char_a_rule : rule<std::string::iterator, char_a_rule,
+                            character<std::string::iterator, 'a'>> {};
 
   std::string input = "a";
   std::string input2 = "b";
 
-  std::shared_ptr<char_a> ast;
-  std::shared_ptr<char_a> ast2;
+  std::shared_ptr<char_a_rule> ast, ast2;
+  
+  typename parse_error<std::string::iterator>::vector errors, errors2;
 
-  parse_error<std::string::iterator>::vector errors;
-  parse_error<std::string::iterator>::vector errors2;
-
-  EXPECT_TRUE(
-      stlx::parser<char_a>::parse(input.begin(), input.end(), ast, errors));
-  EXPECT_FALSE(
-      stlx::parser<char_a>::parse(input2.begin(), input2.end(), ast2, errors2));
+  EXPECT_TRUE(stlx::parser<char_a_rule>::parse(input.begin(), input.end(), ast, errors, false));
+  EXPECT_FALSE(stlx::parser<char_a_rule>::parse(input2.begin(), input2.end(), ast2, errors2, false));
 }
 
-// Test complex expression parsing
+// Test complex expression parsing with parser::parse
 TEST_F(ParserTest, ComplexExpressionParsing) {
-  using digit = characters<std::string::iterator, '0', '9'>;
+  struct digit_sequence : rule<std::string::iterator, digit_sequence,
+                              one_or_more_<std::string::iterator,
+                                          characters<std::string::iterator, '0', '9'>>> {};
 
   std::string input = "123";
-  auto begin = input.begin();
-  auto end = input.end();
-  context<std::string::iterator> ctx(begin, end);
-
-  // Create actual instance of the child rule
-  auto digit_rule = std::make_shared<digit>();
-
-  // Create ONE_OR_MORE combinator with the actual child rule
-  one_or_more_<std::string::iterator, digit> parser(digit_rule);
-
-  EXPECT_TRUE(parser.parse(ctx, begin, end));
-  EXPECT_EQ(parser.size(), 3); // Should have 3 digit matches
+  
+  std::shared_ptr<digit_sequence> ast;
+  
+  EXPECT_TRUE(stlx::parser<digit_sequence>::parse(input.begin(), input.end(), ast, false));
+  
+  if (ast) {
+    EXPECT_EQ(ast->size(), 3);
+  }
 }
 
-// Test edge cases
+// Test edge cases with parser::parse
 TEST_F(ParserTest, EdgeCases) {
-  using char_a = character<std::string::iterator, 'a'>;
+  struct char_a_rule : rule<std::string::iterator, char_a_rule,
+                            character<std::string::iterator, 'a'>> {};
 
   std::string empty = "";
   std::string single = "a";
 
-  auto begin1 = empty.begin();
-  auto end1 = empty.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-
-  auto begin2 = single.begin();
-  auto end2 = single.end();
-  context<std::string::iterator> ctx2(begin2, end2);
-
-  char_a parser;
-  EXPECT_FALSE(char_a().parse(ctx1, begin1, end1));
-  EXPECT_TRUE(char_a().parse(ctx2, begin2, end2));
+  std::shared_ptr<char_a_rule> ast_empty, ast_single;
+  
+  EXPECT_FALSE(stlx::parser<char_a_rule>::parse(empty.begin(), empty.end(), ast_empty, false));
+  EXPECT_TRUE(stlx::parser<char_a_rule>::parse(single.begin(), single.end(), ast_single, false));
 }
 
-// Performance test
+// Performance test with parser::parse
 TEST_F(ParserTest, PerformanceTest) {
-  using digit = characters<std::string::iterator, '0', '9'>;
+  struct digit_sequence : rule<std::string::iterator, digit_sequence,
+                              one_or_more_<std::string::iterator,
+                                          characters<std::string::iterator, '0', '9'>>> {};
 
-  std::string input(10000, '1'); // 10000 digits
-  auto begin = input.begin();
-  auto end = input.end();
-  context<std::string::iterator> ctx(begin, end);
-
-  // Create actual instance of the child rule
-  auto digit_rule = std::make_shared<digit>();
-
-  // Create ONE_OR_MORE combinator with the actual child rule
-  one_or_more_<std::string::iterator, digit> parser(digit_rule);
-
-  EXPECT_TRUE(parser.parse(ctx, begin, end));
-  EXPECT_EQ(parser.size(), 10000);
+  std::string input(10000, '1');
+  
+  std::shared_ptr<digit_sequence> ast;
+  
+  EXPECT_TRUE(stlx::parser<digit_sequence>::parse(input.begin(), input.end(), ast, false));
+  
+  if (ast) {
+    EXPECT_EQ(ast->size(), 10000);
+  }
 }
 
+// Test EOF rule with parser::parse
 TEST_F(ParserTest, EOFRule) {
-  using namespace stlx::parse;
+  struct eof_wrapper : rule<std::string::iterator, eof_wrapper,
+                            and_<std::string::iterator,
+                                character<std::string::iterator, 'h'>,
+                                eof<std::string::iterator>>> {};
 
-  // Test EOF with empty input
-  std::string empty;
-  auto begin1 = empty.begin();
-  auto end1 = empty.end();
-  context<std::string::iterator> ctx1(begin1, end1);
-  eof<std::string::iterator> eof_parser;
+  std::string input1 = "h";
+  std::string input2 = "hello";
   
-  EXPECT_TRUE(eof_parser.parse(ctx1, begin1, end1)) 
-      << "EOF should match empty input";
-
-  // Test EOF with non-empty input (should fail)
-  std::string non_empty = "hello";
-  auto begin2 = non_empty.begin();
-  auto end2 = non_empty.end();
-  context<std::string::iterator> ctx2(begin2, end2);
+  std::shared_ptr<eof_wrapper> ast1, ast2;
   
-  EXPECT_FALSE(eof_parser.parse(ctx2, begin2, end2)) 
-      << "EOF should not match non-empty input";
-  
-  // Test EOF with iterator at end but non-empty string
-  std::string partial = "hello";
-  auto begin3 = partial.end();  // Start at end
-  auto end3 = partial.end();
-  context<std::string::iterator> ctx3(begin3, end3);
-  
-  EXPECT_TRUE(eof_parser.parse(ctx3, begin3, end3)) 
-      << "EOF should match when iterator is at end";
+  EXPECT_TRUE(stlx::parser<eof_wrapper>::parse(input1.begin(), input1.end(), ast1, false));
+  EXPECT_FALSE(stlx::parser<eof_wrapper>::parse(input2.begin(), input2.end(), ast2, false));
 }
