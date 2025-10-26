@@ -929,7 +929,11 @@ public:
   static bool parse(context<iterator_type> &ctx, iterator_type &begin,
                     iterator_type &end,
                     std::shared_ptr<rule_base<Iterator>>& ast) {
-    // For eof, we don't need to skip whitespace - we just check if we're at the end
+    // For eof, skip whitespace first, then check if we're at the end
+    auto backup = begin;
+    if (ctx.ignore_whitespace)
+      skip_ws(begin, end, ctx.ignore_whitespace);
+    
     if (begin == end) {
       // Create instance - but eof has no matched text
       ast = std::make_shared<eof<Iterator>>();
@@ -938,7 +942,7 @@ public:
     
     ctx.parse_errors.emplace_back(
         std::make_shared<parse_error<iterator_type>>(
-            typeid(eof<Iterator>), begin, "Expected end of input",
+            typeid(eof<Iterator>), backup, "Expected end of input",
             begin != end ? std::string(begin, begin + std::min<size_t>(10, end - begin)) +
                 "..."
             : "EOF"));
