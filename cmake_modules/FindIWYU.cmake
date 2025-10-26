@@ -1,5 +1,5 @@
 # FindIWYU.cmake
-# Find Include What You Use (IWYU) tool
+# Find Include What You Use (IWYU) tool and create analysis targets
 
 find_program(IWYU_EXECUTABLE
     NAMES include-what-you-use iwyu
@@ -31,6 +31,27 @@ if(IWYU_EXECUTABLE)
         message(STATUS "IWYU version: ${IWYU_VERSION_OUTPUT}")
     else()
         message(WARNING "IWYU found but may not be compatible with current compiler")
+    endif()
+    
+    # Create IWYU target if requested
+    if(ENABLE_IWYU)
+        add_custom_target(iwyu
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
+            COMMAND ${IWYU_EXECUTABLE}
+                -Xiwyu --no_fwd_decls
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/stlx/stlx.hpp
+            COMMAND ${CMAKE_COMMAND} -E echo "IWYU analysis completed" > ${CMAKE_BINARY_DIR}/reports/iwyu.txt
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMENT "Running Include What You Use analysis and generating report"
+        )
+        
+        # Export target for report generation
+        if(NOT DEFINED _IWYU_REPORT_LIST)
+            set(_IWYU_REPORT_LIST "iwyu" PARENT_SCOPE)
+        else()
+            list(APPEND _IWYU_REPORT_LIST "iwyu")
+            set(_IWYU_REPORT_LIST ${_IWYU_REPORT_LIST} PARENT_SCOPE)
+        endif()
     endif()
 else()
     set(IWYU_FOUND FALSE)

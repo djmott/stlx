@@ -1,5 +1,5 @@
 # FindCPPLINT.cmake
-# Find cpplint Python script for Google C++ style checking
+# Find cpplint Python script for Google C++ style checking and create analysis targets
 
 find_program(CPPLINT_EXECUTABLE
     NAMES cpplint
@@ -49,6 +49,34 @@ endif()
 if(CPPLINT_EXECUTABLE)
     set(CPPLINT_FOUND TRUE)
     message(STATUS "Found cpplint: ${CPPLINT_EXECUTABLE}")
+    
+    # Create cpplint target if requested
+    if(ENABLE_CPPLINT)
+        file(GLOB_RECURSE CPPLINT_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp
+        )
+        add_custom_target(cpplint
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/reports
+            COMMAND ${CPPLINT_EXECUTABLE} 
+                --linelength=100
+                --filter=-build/include,-build/namespaces,-readability/namespace
+                --output=vs7
+                ${CPPLINT_SOURCES}
+            COMMAND ${CMAKE_COMMAND} -E echo "cpplint analysis completed" > ${CMAKE_BINARY_DIR}/reports/cpplint.txt
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMENT "Running cpplint style checking and generating report"
+        )
+        
+        # Export target for report generation
+        if(NOT DEFINED _CPPLINT_REPORT_LIST)
+            set(_CPPLINT_REPORT_LIST "cpplint" PARENT_SCOPE)
+        else()
+            list(APPEND _CPPLINT_REPORT_LIST "cpplint")
+            set(_CPPLINT_REPORT_LIST ${_CPPLINT_REPORT_LIST} PARENT_SCOPE)
+        endif()
+    endif()
 else()
     set(CPPLINT_FOUND FALSE)
     message(STATUS "cpplint not found - Google C++ style checking will be skipped")
